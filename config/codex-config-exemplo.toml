@@ -1,0 +1,18 @@
+# EXEMPLO de trecho para mesclar em %USERPROFILE%\.codex\config.toml (Windows)
+# NÃO substitua o config.toml inteiro: preserve seu login, servidores MCP e preferências.
+# No Codex CLI, verifique a versão e os modelos disponíveis; alguns presets restringem
+# quais modelos os subagentes podem usar.
+
+[features]
+multi_agent = true
+
+[agents]
+max_concurrent_threads_per_session = 3
+# Ajuste um modelo default somente se estiver no allowlist dos agentes da sua sessão.
+# default_subagent_model = "gpt-6.1-sol"
+# default_subagent_reasoning_effort = "medium"
+
+# Configure o modelo principal no seletor /model da sua interface; se suportado,
+# use GPT-6 Astra / high no desenho e GPT-6.1 Sol / medium nos ciclos de código.
+# Se a sua instalação já declara [features] ou [agents], adicione as CHAVES às
+# seções existentes; duplicar uma tabela TOML causará erro de leitura.

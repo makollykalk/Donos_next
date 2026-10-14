@@ -1,0 +1,8 @@
+{
+  "name": "@donos/contracts",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
+  "dependencies": { "zod": "4.6.7" }
+}

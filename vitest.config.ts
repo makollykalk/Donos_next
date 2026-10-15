@@ -3,7 +3,10 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   resolve: {
-    alias: { '@donos/contracts': fileURLToPath(new URL('./packages/contracts/src/index.ts', import.meta.url)) },
+    alias: {
+      '@donos/contracts': fileURLToPath(new URL('./packages/contracts/src/index.ts', import.meta.url)),
+      '@donos/db': fileURLToPath(new URL('./packages/db/src/index.ts', import.meta.url)),
+    },
   },
   test: {
     include: ['tests/unit/**/*.test.ts'],

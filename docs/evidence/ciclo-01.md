@@ -58,3 +58,7 @@ Destino único: `kfthwjrvgslnsjigqnyc`, DONOS Next DEV, criado pelo usuário. Po
 - IDs da fixture transacional `tenant-references.sql` isolados em prefixos 710/720 para não conflitar com fixture persistente 100/200. Scripts SQL de rollback são provas separadas da suíte Node, não contados nela.
 - Limitação: replay completo em banco local descartável não executado (Docker ausente). Não executar reset remoto para substituir essa prova.
 - Usuário autorizou remote novo `https://github.com/makollykalk/Donos_next.git`; ls-remote retornou vazio com exit0. Nenhum conteúdo legado herdado.
+
+## Task 3 — transações
+
+`tenant-transactions.test.ts` escrito antes do wrapper: RED por módulo ausente. Após implementação, integração **3 arquivos/6 testes PASS**, consultas reais NOBYPASSRLS. Inclui A/C do mesmo dono, B separado, ID forjado negado pelo RLS, pool max1 após commit/rollback e requests paralelos. TypeScript build exit0. A factory `createDatabase(pool)` mantém dependências explícitas por instância; nenhum contexto global. Contexto usa mesma conexão e set_config LOCAL. Testes adicionais de unidade/contexto seguem na Task4; replay local continua não executado.

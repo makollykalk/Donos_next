@@ -8,9 +8,24 @@
 
 **Tech Stack:** Node24.22.0, pnpm11.25.0, TypeScript6.0.3, pg8.23.1, Zod4.6.7, Fastify5.12.7, React19.3.1/Vite8.3.4, PostgreSQL17 do DEV autorizado, Vitest5.0.4/Playwright1.64.1. Nenhuma dependência financeira nova.
 
-**Spec:** [2026-10-15-inventory-valuation-design.md](../specs/2026-10-15-inventory-valuation-design.md), com [ADR0003](../../adr/0003-inventory-valuation.md), V3 e T-03..T-10. **Plano aprovado pelo fundador em 15/10/2026, condicionado ao fechamento e à revisão do Ciclo 01. Implementação Inventory não iniciada.**
+**Spec:** [2026-10-15-inventory-valuation-design.md](../specs/2026-10-15-inventory-valuation-design.md), com [ADR0003](../../adr/0003-inventory-valuation.md), V3 e T-03..T-10. **Plano aprovado pelo fundador em 15/10/2026, condicionado ao fechamento e à revisão do Ciclo 01. Execução autorizada após revisão humana do core; implementação validada para revisão do PR, com evidências em docs/evidence/ciclo-02-inventory.md.**
 
-## Global Constraints
+## Registro de execução
+
+A checklist granular abaixo preserva a sequência TDD aprovada. O estado efetivamente comprovado é consolidado nesta tabela e no [relatório](../../evidence/ciclo-02-inventory.md); não se presume execução de uma etapa apenas porque o código existe.
+
+| Task | Estado / evidência |
+|---|---|
+| 0 | Concluída: core revisado pelo fundador, aprovação “Revisado! siga!”, base2df79f9 e branch isolada do Ciclo02 |
+| 1 | Concluída: contratos estritos e RED/GREEN; commit37c3f99 |
+| 2 | Concluída: motor BigInt,15 testes puros e revisão independente; commitdd1b87b |
+| 3 | Schema/integridade aplicados e testados somente no DEV autorizado; commitc7d2775. Replay local descartável **não executado** por ausência de Docker/WSL |
+| 4 | Concluída: catálogo/contexto/conversões e repositórios; commit02b4009 |
+| 5–7 | Concluídas: recebimentos/baixas/estornos, rollback, concorrência, API/RLS reais; commits5e7db5a e69e01b7. Provas complementares commit1c5cd27:4/4 SQL finais aprovados;53 cenários SQL distintos no conjunto documentado |
+| 8 | Concluída: slot protegido commitf771383, UI commitfc5b379;18/18 browser com canônico/API real e6 unitários de UI |
+| 9 | Revisão independente sem bloqueador de produto;116 unitários, typecheck/lint/build aprovados e scan sem vazamentos. Fechamento/PR registrado no relatório; sem merge/deploy ou avanço ao Ciclo03 |
+
+## Restrições de execução
 
 - Não iniciar código enquanto o Ciclo01 não estiver fechado e revisado.
 - Coordenador possui migrations, RLS, contratos e integração. Motor puro e revisão de testes podem ser delegados em arquivos exclusivos; UI somente após checkpoint de contrato/API, sem banco mutável compartilhado entre agentes.
@@ -52,6 +67,8 @@ Migrations serão geradas **apenas depois da aprovação** pela CLI fixada:
 Antes de escrever SQL, registrar neste plano e em evidências os caminhos exatos retornados pela CLI. Se aplicar por MCP ao DEV, reconciliar o nome local à versão realmente retornada no histórico, sem reescrever migration aplicada. Esse timestamp gerado é a única resolução posterior de caminho permitida; os demais caminhos abaixo são exatos. Nenhuma migration Inventory foi criada no planejamento.
 
 ## Responsabilidades e paralelismo
+
+Execução iniciada em15/10 após “Revisado! siga!”. Base core2df79f9, branch codex/ciclo-02-inventory. CLI gerou originalmente M_INV_SCHEMA=`supabase/migrations/20261015143719_inventory_schema.sql` e M_INV_INTEGRITY=`supabase/migrations/20261015143722_inventory_integrity.sql`. Task0 concluída; rastreabilidade em docs/evidence/ciclo-02-inventory.md.
 
 | Responsável | Posse exclusiva / momento |
 |---|---|
@@ -235,4 +252,4 @@ Tasks2 e3 podem ocorrer em paralelo após Task1: motor só escreve arquivos puro
 | Browser/dependência ausente | Resolver ambiente e repetir; build/unit não substituem E2E/SQL |
 | Projeto/host/role divergente | Abort antes da conexão/mutation; nenhum fallback para legado |
 
-Este plano e a spec foram escritos juntos por solicitação expressa do fundador, para revisão conjunta. A execução por coordenador+agentes especializados já foi escolhida; conteúdo aprovado em 15/10/2026. O gate técnico do core foi fechado e o PR #1 foi entregue; aguarda revisão humana do core antes da implementação Inventory.
+Este plano e a spec foram escritos juntos por solicitação expressa do fundador, para revisão conjunta. A execução por coordenador+agentes especializados já foi escolhida; conteúdo aprovado em 15/10/2026. O gate técnico do core foi fechado e o PR #1 foi entregue; o fundador revisou o core e autorizou a implementação Inventory com “Revisado! siga!”.

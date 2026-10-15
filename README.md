@@ -1,6 +1,6 @@
-# DONOS Next — Ciclo 01
+# DONOS Next — Core e Estoque Base
 
-Fundação para proprietários, organizações e unidades. Portal, Estoque e Precificação são apps locais independentes, com uma API central. Consulte [evidências](docs/evidence/ciclo-01.md) para resultados e limites; shells não são motores comerciais prontos.
+Fundação para proprietários, organizações e unidades, com Estoque Base do Ciclo02. Portal, Estoque e Precificação são apps locais independentes e consomem uma API central. Resultados e limites: [core](docs/evidence/ciclo-01.md) e [estoque](docs/evidence/ciclo-02-inventory.md). Precificação continua como shell protegido; seu motor pertence a outro ciclo.
 
 ## Requisitos
 
@@ -55,4 +55,17 @@ O diretório `.tools/` pode conter runtime/downloads/logs locais, todos ignorado
 
 ## Escopo
 
-Core inclui criação idempotente de organização/primeira unidade, unidades adicionais, contexto, entitlements de demonstração e metering com fake apenas em testes. Não há rota para conceder plano, chamar IA ou cobrar. Fornecedores/estoque/fichas/preços não estão implementados no Ciclo01. O [plano Inventory](docs/superpowers/plans/2026-10-15-inventory-valuation.md) foi aprovado, com execução condicionada ao fechamento do core. Nenhuma vinculação com o legado/produção, deploy ou merge automático.
+Core inclui organização/primeira unidade idempotentes, contexto, entitlements de demonstração e metering com fake apenas em testes. Não há rota para conceder plano, chamar IA ou cobrar. O core foi revisado pelo fundador e o [plano Inventory](docs/superpowers/plans/2026-10-15-inventory-valuation.md) aprovado; o Ciclo02 foi implementado e validado para revisão humana. Resultados:116 unitários,53 cenários SQL distintos em execuções documentadas e18E2E; typecheck/lint/build aprovados. Nenhuma vinculação com legado/produção, deploy ou merge automático.
+
+## Operar o Estoque Base
+
+1. Entre no app Estoque e selecione empresa e unidade com inventory_core de demonstração. Insumos/saldos/extrato pertencem à unidade; fornecedores são compartilhados somente na mesma organização.
+2. Cadastre insumo com base kg, L ou un. Base e permissão de fracionar unidades são imutáveis; nome e estado de arquivamento podem ser atualizados. Embalagens têm fatores versionados por insumo; massa/volume não se misturam por inferência.
+3. Cadastre fornecedor e salve um rascunho com quantidade, unidade e custo efetivo em reais por unidade original. Não há rateio automático de encargos. Preço zero exige motivo. O rascunho não altera saldo nem histórico de preços.
+4. Abra o recebimento, confira todas as linhas e confirme explicitamente a mercadoria recebida. A transação grava todos os itens, custos, saldo, histórico e auditoria ou nenhum efeito.
+5. Registre saída com motivo; o servidor calcula o custo. Consulte saldo/valor, razão exata do custo médio, ledger e histórico por fornecedor. Valores críticos trafegam como strings, com quantidade6 casas e valor12; UI usa BigInt/string para formatação.
+6. Estorne somente a última saída elegível ou o recebimento inteiro cujas linhas continuem últimas. A compensação exige motivo e preserva origens/preços. Sucessores bloqueiam estorno; não há revaloração retroativa, DELETE de movimento ou edição de recebimento.
+
+A API fica sob `/v1/organizations/:organizationId/restaurants/:restaurantId/inventory`; toda rota exige Bearer, X-Donos-Context e entitlement no servidor. Mutações exigem Idempotency-Key UUID. Em timeout, repetir o mesmo comando com a mesma chave; não gerar outra por simples retry. Contratos completos na [spec](docs/superpowers/specs/2026-10-15-inventory-valuation-design.md).
+
+Fora deste ciclo: fichas/rendimento, contagem física/PDF, listas Premium, IA/WhatsApp, motor de precificação, pedidos/recebimento parcial, transferências, cobrança e deploy. Nenhum próximo ciclo é iniciado autonomamente.

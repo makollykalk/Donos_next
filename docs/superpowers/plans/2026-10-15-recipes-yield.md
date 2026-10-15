@@ -40,13 +40,13 @@ Banco sob posse do coordenador:
 
 ## Tarefas pequenas e commits
 
-### 0. Preflight e base isolada
+### Task 0: Preflight e base isolada
 
 1. Confirmar `git status`, branch, base e remote; garantir checkout do DONOS Next e confirmar que o caminho legado não está como destino de qualquer comando. Não alterar legado.
 2. Confirmar que o plano está aprovado e que integração aponta a banco local descartável/teste. Sem aprovação, encerrar antes de iniciar esta tarefa.
 3. Commit esperado de documentos já preparado antes de abrir implementação; manter PR do ciclo anterior separado.
 
-### 1. Contratos executáveis
+### Task 1: Contratos executáveis
 
 **Teste primeiro:** `tests/unit/recipe-contracts.test.ts`, conforme casos acima; executar `pnpm test:unit -- recipe-contracts` e observar falhas por módulo/schema ausente.
 
@@ -54,7 +54,7 @@ Banco sob posse do coordenador:
 
 **Verificar/commit:** contratos unitários, `pnpm typecheck`, lint; commit `feat(contracts): define recipe and measured yield APIs`.
 
-### 2. Núcleo exato, conversão, rendimento e grafo (agente de fórmulas; coordenador revisa)
+### Task 2: Núcleo exato, conversão, rendimento e grafo (agente de fórmulas; coordenador revisa)
 
 **Fronteira congelada:** `@donos/domain-recipes` recebe os tipos e snapshots definidos na tarefa 1; o agente só edita `packages/domain-recipes/**` e `tests/unit/recipe-calculation.test.ts`. Não toca contratos, SQL, migrations, DB/API ou UI.
 
@@ -64,7 +64,7 @@ Banco sob posse do coordenador:
 
 **Verificar/commit:** `pnpm test:unit -- recipe-calculation`, `pnpm test:unit -- inventory-decimal inventory-valuation`, typecheck/lint; commit `feat(recipes): calculate exact yield-based recipe costs`.
 
-### 3. Schema, RLS, referências e integridade (coordenador)
+### Task 3: Schema, RLS, referências e integridade (coordenador)
 
 **Teste primeiro:** `tests/integration/recipe-schema.test.ts`, `recipe-tenant-security.test.ts` e `recipe-graph-concurrency.test.ts`; adicionar SQL de teste para FKs inválidas, grants, policies/RLS forçada, referências A→B e corrida de ciclos. Confirmar falha por relação ausente/invariante não implementada.
 
@@ -72,7 +72,7 @@ Banco sob posse do coordenador:
 
 **Verificar/commit:** `pnpm supabase:test:reset`/comando efetivamente documentado no repo contra instância local, integração SQL, grants, tenant e corrida; commit `feat(db): add isolated recipe and yield schema`.
 
-### 4. Repositório e comandos de versão/medição (coordenador)
+### Task 4: Repositório e comandos de versão/medição (coordenador)
 
 **Teste primeiro:** `tests/integration/recipe-commands.test.ts`: criar ficha, criar nova versão, registrar estimativa/medição, não validar estimativa, validar real, corrigir por medição sucessora, idempotência, payload conflitante, falha de etapa reverte tudo, contexto A1/A2 e tenant B. Esperar falhar em chamadas inexistentes.
 
@@ -80,7 +80,7 @@ Banco sob posse do coordenador:
 
 **Verificar/commit:** testes reais no Postgres, suíte inventory sem regressão, typecheck/lint; commit `feat(recipes): persist immutable recipe versions and measurements`.
 
-### 5. Custo atual, snapshot histórico e API somente leitura (coordenador)
+### Task 5: Custo atual, snapshot histórico e API somente leitura (coordenador)
 
 **Teste primeiro:** `tests/integration/recipe-cost-api.test.ts` com os quatro cálculos PostgreSQL do spec, versão atual não validada, versão antiga, zero de estoque, qualquer custo faltante, sub-preparo compartilhado em dois pais, unidades inválidas, source/sequence/timestamp, tenant/unidade, sessão ausente, `inventory_core` off, ID forjado e nenhum efeito colateral do GET. Confirme leitura na mesma consulta/snapshot DB e sem mock do saldo.
 
@@ -88,7 +88,7 @@ Banco sob posse do coordenador:
 
 **Verificar/commit:** integração SQL/API, T-11/T-12/T-16, tenant, inventário e unit; commit `feat(api): expose authorized current recipe cost`.
 
-### 6. Operação mínima no App 01 (após contrato e rotas congelados)
+### Task 6: Operação mínima no App 01 (após contrato e rotas congelados)
 
 **Teste primeiro:** expandir `tests/e2e/recipe-flow.spec.ts`: proprietário abre fichas, cria rascunho, adiciona linhas de insumo ou pré-preparo, mede bruto/líquido/final, vê estimativa destacada, tentativa de validar sem medição real fica bloqueada com explicação, mede/valida e vê custo/fonte/data; context switch não carrega dados anteriores; tenant B não acessa IDs de A. E2E não substitui integração SQL.
 
@@ -98,7 +98,7 @@ Banco sob posse do coordenador:
 
 **Verificar/commit:** E2E alvo, lint/typecheck/build; commit `feat(estoque): add measured recipe workflow`.
 
-### 7. Revisão independente e encerramento do Ciclo 03
+### Task 7: Revisão independente e encerramento do Ciclo 03
 
 **Teste primeiro:** rodar testes de regressão e revisar gates listados; consertar defeitos como tarefas TDD pequenas, com novos testes de regressão.
 

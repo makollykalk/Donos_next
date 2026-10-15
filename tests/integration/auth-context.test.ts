@@ -13,7 +13,7 @@ it('JWT real, contexto hash/TTL, rota divergente e outra sessão negados',async(
   expect(selected.token).toMatch(/^[a-f0-9]{64}$/);
   await db.withActorTx(actor,async tx=>{
     const row=(await tx.query('select token_hash,extract(epoch from (expires_at-created_at))::int as ttl from core.request_contexts order by created_at desc limit 1')).rows[0];
-    expect(row.token_hash).not.toBe(selected.token); expect(row.ttl).toBe(1800);
+    expect(row!.token_hash).not.toBe(selected.token); expect(row!.ttl).toBe(1800);
   });
   await db.withRestaurantTx(actor,selected,selected.token,async(_ctx,tx)=>{
     expect((await tx.query('select id from core.restaurants')).rows).toEqual([{id:f.a1}]);

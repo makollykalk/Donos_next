@@ -31,3 +31,23 @@ it('bootstrap concorrente/idempotente e unidade; payload divergente dá409',asyn
   const [c,d]=await Promise.all([app.inject(unitOptions),app.inject(unitOptions)]); expect(c.statusCode).toBe(201);expect(c.json()).toEqual(d.json());
   expect((await app.inject({method:'POST',url:'/v1/contexts',headers:headers(),payload:{organizationId:f.orgA,restaurantId:f.a2}})).statusCode).toBe(201);
 });
+it('T-01 com JWT real de B contra A; entitlements obrigatórios na API direta',async()=>{
+  const b=await login('b'), bheaders={authorization:`Bearer ${b.token}`};
+  const listed=await app.inject({url:'/v1/organizations',headers:bheaders});
+  expect(listed.statusCode).toBe(200); expect(listed.body).toContain(f.orgB);expect(listed.body).not.toContain(f.orgA);
+  for(const suffix of ['restaurants','capabilities'])
+    expect((await app.inject({url:`/v1/organizations/${f.orgA}/${suffix}`,headers:bheaders})).statusCode).toBe(404);
+  expect((await app.inject({method:'POST',url:`/v1/organizations/${f.orgA}/restaurants`,headers:{...bheaders,'idempotency-key':randomUUID()},payload:{name:'forged'}})).statusCode).toBe(404);
+  async function context(org:string,unit:string){
+    const r=await app.inject({method:'POST',url:'/v1/contexts',headers:headers(),payload:{organizationId:org,restaurantId:unit}});
+    expect(r.statusCode).toBe(201);return r.json().token as string;
+  }
+  const a1=await context(f.orgA,f.a1),c1=await context(f.orgC,f.c1);
+  const access=(org:string,unit:string,appName:string,contextToken:string)=>app.inject({url:`/v1/organizations/${org}/restaurants/${unit}/access/${appName}`,headers:{...headers(),'x-donos-context':contextToken}});
+  expect((await access(f.orgA,f.a1,'estoque',a1)).statusCode).toBe(200);
+  expect((await access(f.orgA,f.a1,'precificacao',a1)).statusCode).toBe(403);
+  expect((await access(f.orgC,f.c1,'precificacao',c1)).statusCode).toBe(200);
+  expect((await access(f.orgC,f.c1,'estoque',c1)).statusCode).toBe(403);
+  expect((await access(f.orgA,f.a2,'estoque',a1)).statusCode).toBe(409);
+  expect((await access(f.orgC,f.c1,'precificacao',a1)).statusCode).toBe(409);
+});

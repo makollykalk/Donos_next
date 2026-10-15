@@ -14,6 +14,7 @@ export const config = loadConfig({NODE_ENV:'test', SUPABASE_MODE:'cloud-dev',
 export function runtimePool(max=4): pg.Pool {
   const url=new URL(config.databaseUrl); url.search='';
   return new pg.Pool({connectionString:url.toString(),max,connectionTimeoutMillis:10000,
+    statement_timeout:10000,query_timeout:15000,idle_in_transaction_session_timeout:20000,
     ssl:{rejectUnauthorized:true,ca:readFileSync('.local/supabase-ca.crt','utf8')}});
 }
 export async function login(name:'a'|'b') {

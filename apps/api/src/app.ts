@@ -8,6 +8,8 @@ import { registerErrors } from './http/errors.js';
 import { registerAuth } from './routes/auth.js';
 import { registerContexts } from './routes/contexts.js';
 import { registerOrganizations } from './routes/organizations.js';
+import { registerCapabilities } from './routes/capabilities.js';
+import { registerModuleAccess } from './routes/module-access.js';
 
 export type { AppDependencies } from './http/security.js';
 
@@ -18,6 +20,7 @@ export function buildApp(deps: AppDependencies): FastifyInstance {
   const services=createServices(deps);
   registerAuth(app,services); registerContexts(app,services);
   registerOrganizations(app,services);
+  registerCapabilities(app,services);registerModuleAccess(app,services);
   app.get('/health', () => ({ status: 'ok' as const }));
   return app;
 }

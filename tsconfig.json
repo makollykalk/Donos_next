@@ -4,6 +4,11 @@
     { "path": "packages/contracts" },
     { "path": "packages/db" },
     { "path": "packages/domain-core" },
+    { "path": "packages/domain-billing" },
+    { "path": "packages/auth-client" },
+    { "path": "apps/portal" },
+    { "path": "apps/estoque" },
+    { "path": "apps/precificacao" },
     { "path": "apps/api" }
   ]
 }

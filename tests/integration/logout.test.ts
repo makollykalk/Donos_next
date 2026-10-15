@@ -14,3 +14,14 @@ it('logout repetido, JWT antigo e refresh com mesma sessão permanecem revogados
   const refreshed=await verify(data.session!.access_token,randomUUID()); expect(refreshed.sessionId).toBe(actor.sessionId);
   await expect(db.withActorTx(refreshed,async()=>true)).rejects.toMatchObject({code:'UNAUTHENTICATED'});
 });
+it('request já autorizada conclui; novas autorizações após commit falham',async()=>{
+  const a=await login('a'),actor=await createActorVerifier(a.auth.auth,`${config.supabaseUrl}/auth/v1`)(a.token,randomUUID());
+  let ready!:()=>void, resume!:()=>void;
+  const authorized=new Promise<void>(r=>{ready=r;}), barrier=new Promise<void>(r=>{resume=r;});
+  const running=db.withActorTx(actor,async()=>{ready();await barrier;return 'already authorized';});
+  try {
+    await authorized; await revokeSession(db,actor);
+    await expect(db.withActorTx(actor,async()=>true)).rejects.toMatchObject({code:'UNAUTHENTICATED'});
+  } finally {resume();}
+  expect(await running).toBe('already authorized');
+});

@@ -62,3 +62,7 @@ Destino único: `kfthwjrvgslnsjigqnyc`, DONOS Next DEV, criado pelo usuário. Po
 ## Task 3 — transações
 
 `tenant-transactions.test.ts` escrito antes do wrapper: RED por módulo ausente. Após implementação, integração **3 arquivos/6 testes PASS**, consultas reais NOBYPASSRLS. Inclui A/C do mesmo dono, B separado, ID forjado negado pelo RLS, pool max1 após commit/rollback e requests paralelos. TypeScript build exit0. A factory `createDatabase(pool)` mantém dependências explícitas por instância; nenhum contexto global. Contexto usa mesma conexão e set_config LOCAL. Testes adicionais de unidade/contexto seguem na Task4; replay local continua não executado.
+
+## Task 4 — Auth e contexto
+
+Testes antes da implementação falharam por módulos ausentes. Unit Auth: **10 PASS** (mesmo bearer, issuer/aud/exp/session/sub, usuário inconsistente/anônimo/não confirmado, indisponibilidade). Integração real **2 arquivos/2 PASS**: JWT adulterado negado, hash/TTL30min, A1 não interpretado como A2, sessão diferente negada; logout idempotente e refresh com mesmo session_id continuam bloqueados pelo banco. Validação usa getClaims + getUser conforme documentação oficial consultada nesta execução. Nenhum token/senha registrado. Rotas me/logout/contexts implementadas, sem logger de requests. API responde no-store e CORS local. Integração de rotas completa é gate da Task5.

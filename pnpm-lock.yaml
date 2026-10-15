@@ -47,6 +47,18 @@ importers:
       '@donos/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@donos/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@donos/domain-core':
+        specifier: workspace:*
+        version: link:../../packages/domain-core
+      '@fastify/cors':
+        specifier: 11.3.1
+        version: 11.3.1
+      '@supabase/supabase-js':
+        specifier: 2.117.3
+        version: 2.117.3
       fastify:
         specifier: 5.12.7
         version: 5.12.7
@@ -69,6 +81,15 @@ importers:
       '@types/pg':
         specifier: 8.23.1
         version: 8.23.1
+
+  packages/domain-core:
+    dependencies:
+      '@donos/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@donos/db':
+        specifier: workspace:*
+        version: link:../db
 
 packages:
 

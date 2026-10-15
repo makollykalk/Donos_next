@@ -1,10 +1,21 @@
 import Fastify from 'fastify';
 import type { FastifyInstance } from 'fastify';
+import { randomUUID } from 'node:crypto';
+import cors from '@fastify/cors';
+import { createServices } from './http/security.js';
+import type { AppDependencies } from './http/security.js';
+import { registerErrors } from './http/errors.js';
+import { registerAuth } from './routes/auth.js';
+import { registerContexts } from './routes/contexts.js';
 
-export type AppDependencies = Readonly<Record<string, never>>;
+export type { AppDependencies } from './http/security.js';
 
-export function buildApp(_deps: AppDependencies): FastifyInstance {
-  const app = Fastify({ logger: false, bodyLimit: 32_768, trustProxy: false });
+export function buildApp(deps: AppDependencies): FastifyInstance {
+  const app = Fastify({ logger: false, bodyLimit: 32_768, trustProxy: false,genReqId:()=>randomUUID() });
+  void app.register(cors,{origin:[...(deps.corsOrigins??[])],methods:['GET','POST'],allowedHeaders:['Authorization','Content-Type','Idempotency-Key','X-Donos-Context']});
+  registerErrors(app);
+  const services=createServices(deps);
+  registerAuth(app,services); registerContexts(app,services);
   app.get('/health', () => ({ status: 'ok' as const }));
   return app;
 }

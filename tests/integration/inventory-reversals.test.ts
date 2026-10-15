@@ -7,7 +7,12 @@ it('compensation restores full exhausted state with growing sequence; immutable 
  const f=await createInventoryFixtures();try{
   const s=createInventoryService(f.db),o=inventoryOperations(s,f),i=await o.ingredient(),supplier=await o.supplier();const receipt=await o.receive(i.id,supplier.id);
   const issue=await o.issue(i.id,'10'),before=(await s.listMovements(...o.a,i.id,{})).items;
-  const key=randomUUID(),rev=await s.reverseIssue(...o.a,issue.movementId,{reason:'erro de lançamento'},key);
+  const keys=[randomUUID(),randomUUID()] as const;
+  const attempts=await Promise.allSettled(keys.map(key=>s.reverseIssue(...o.a,issue.movementId,{reason:'erro de lançamento'},key)));
+  expect(attempts.filter(r=>r.status==='fulfilled')).toHaveLength(1);
+  expect(attempts.find(r=>r.status==='rejected')).toMatchObject({reason:{code:'REVERSAL_ALREADY_APPLIED'}});
+  const success=attempts.find(r=>r.status==='fulfilled');if(!success||success.status!=='fulfilled')throw new Error('No compensation committed');
+  const key=attempts[0]?.status==='fulfilled'?keys[0]:keys[1],rev=success.value;
   expect(rev.balance).toMatchObject({quantity:'10',value:'200',referenceQuantity:'10',referenceValue:'200',issuedQuantity:'0',sequence:'3'});
   expect(await s.reverseIssue(...o.a,issue.movementId,{reason:'erro de lançamento'},key)).toEqual(rev);
   await expect(s.reverseIssue(...o.a,issue.movementId,{reason:'de novo'},randomUUID())).rejects.toMatchObject({code:'REVERSAL_ALREADY_APPLIED'});

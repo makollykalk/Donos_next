@@ -4,20 +4,28 @@
   "version": "0.1.0",
   "type": "module",
   "packageManager": "pnpm@11.25.0",
-  "engines": { "node": ">=24.22.0 <25", "pnpm": "11.25.0" },
+  "engines": {
+    "node": ">=24.22.0 <25",
+    "pnpm": "11.25.0"
+  },
   "scripts": {
     "build": "tsc -b",
     "typecheck": "tsc -b && tsc -p tsconfig.tests.json --noEmit",
     "lint": "eslint . --max-warnings 0",
     "test": "pnpm test:unit",
     "test:unit": "vitest run",
-    "test:integration": "node scripts/pending-check.mjs integration",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:e2e": "node scripts/pending-check.mjs e2e",
     "dev:api": "pnpm build && node --watch apps/api/dist/server.js"
   },
   "devDependencies": {
+    "@fastify/cors": "11.3.1",
+    "@supabase/supabase-js": "2.117.3",
     "@types/node": "24.19.2",
+    "@types/pg": "8.23.1",
     "eslint": "10.12.0",
+    "pg": "8.23.1",
+    "supabase": "2.121.0",
     "typescript": "6.0.3",
     "typescript-eslint": "8.71.2",
     "vite": "8.3.4",

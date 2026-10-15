@@ -5,6 +5,8 @@ export type ApiConfig = Readonly<{
   supabaseUrl: string;
   supabasePublishableKey: string;
   databaseUrl: string;
+  databaseTls: boolean;
+  databaseCaFile?: string;
   corsOrigins: readonly string[];
 }>;
 
@@ -46,6 +48,20 @@ function publishableKey(value: string): string {
   return value;
 }
 
+const approvedDevRef = 'kfthwjrvgslnsjigqnyc';
+function cloudUrls(env: Record<string, string | undefined>, authUrl: string, databaseUrl: string): void {
+  if (env.SUPABASE_PROJECT_REF !== approvedDevRef) return invalid('SUPABASE_PROJECT_REF');
+  if (authUrl !== `https://${approvedDevRef}.supabase.co`) return invalid('SUPABASE_URL');
+  let db: URL;
+  try { db = new URL(databaseUrl); } catch { return invalid('DATABASE_URL'); }
+  if (!['postgres:', 'postgresql:'].includes(db.protocol)
+    || !((db.hostname === `db.${approvedDevRef}.supabase.co` && db.username === 'donos_api')
+      || (db.hostname === 'aws-0-us-east-1.pooler.supabase.com' && db.username === `donos_api.${approvedDevRef}`))
+    || !db.password || db.pathname !== '/postgres'
+    || (db.port !== '' && db.port !== '5432') || db.hash
+    || db.search !== '?sslmode=verify-full') return invalid('DATABASE_URL');
+}
+
 export function loadConfig(env: Record<string, string | undefined>): ApiConfig {
   const environment = env.NODE_ENV ?? 'development';
   if (environment !== 'development' && environment !== 'test') return invalid('NODE_ENV');
@@ -54,16 +70,24 @@ export function loadConfig(env: Record<string, string | undefined>): ApiConfig {
   const port = Number(rawPort); // TCP port, never money or a domain quantity.
   if (port > 65535) return invalid('PORT');
   const supabaseUrl = requireValue(env, 'SUPABASE_URL');
-  localUrl(supabaseUrl, 'SUPABASE_URL');
   const databaseUrl = requireValue(env, 'DATABASE_URL');
-  localUrl(databaseUrl, 'DATABASE_URL', true);
+  const mode = env.SUPABASE_MODE ?? 'local';
+  if (mode === 'cloud-dev') {
+    cloudUrls(env, supabaseUrl, databaseUrl);
+    requireValue(env,'DATABASE_CA_FILE');
+  }
+  else if (mode === 'local') {
+    localUrl(supabaseUrl, 'SUPABASE_URL');
+    localUrl(databaseUrl, 'DATABASE_URL', true);
+  } else return invalid('SUPABASE_MODE');
   const corsOrigins = requireValue(env, 'CORS_ORIGINS').split(',');
   for (const origin of corsOrigins) {
     const parsed = localUrl(origin, 'CORS_ORIGINS');
     if (origin !== parsed.origin) return invalid('CORS_ORIGINS');
   }
   return Object.freeze({
-    environment, host: '127.0.0.1', port, supabaseUrl, databaseUrl,
+    environment, host: '127.0.0.1', port, supabaseUrl, databaseUrl, databaseTls: mode === 'cloud-dev',
+    ...(mode === 'cloud-dev' ? {databaseCaFile:requireValue(env,'DATABASE_CA_FILE')} : {}),
     supabasePublishableKey: publishableKey(requireValue(env, 'SUPABASE_PUBLISHABLE_KEY')),
     corsOrigins: Object.freeze(corsOrigins),
   });

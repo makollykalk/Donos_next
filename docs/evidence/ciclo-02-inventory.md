@@ -119,3 +119,5 @@ Essa execução acrescenta uma prova nova e repete três cenários reforçados: 
 | 1c5cd27 | Provas SQL de esgotamento, saldo isolado e estorno concorrente |
 
 Coordenador manteve SQL/contratos/integração; agentes trabalharam no motor puro, UI e revisões em arquivos disjuntos. Revisão independente não substitui a aprovação humana do PR. Este fechamento entrega somente Ciclo02 para revisão; Ciclo03 permanece não iniciado.
+
+Entrega publicada: [PR #2 — Ciclo02 Inventory](https://github.com/makollykalk/Donos_next/pull/2), branch `codex/ciclo-02-inventory`, base `feat/ciclo-01-core-multitenant` (`2df79f9`). O PR #1 ainda não foi integrado à main; a base evita misturar sua revisão com este ciclo. Commits adicionais:62bc108 fecha documentação; o commit que acrescenta este vínculo é apenas documental. Branch publicada somente em makollykalk/Donos_next; PR anexado ao chat. Sem merge/deploy. Revisão humana solicitada antes de qualquer avanço.

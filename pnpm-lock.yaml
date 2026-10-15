@@ -200,6 +200,15 @@ importers:
         specifier: workspace:*
         version: link:../db
 
+  packages/domain-inventory:
+    dependencies:
+      '@donos/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@donos/db':
+        specifier: workspace:*
+        version: link:../db
+
 packages:
 
   '@cacheable/memory@2.2.0':

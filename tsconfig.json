@@ -5,6 +5,7 @@
     { "path": "packages/db" },
     { "path": "packages/domain-core" },
     { "path": "packages/domain-billing" },
+    { "path": "packages/domain-inventory" },
     { "path": "packages/auth-client" },
     { "path": "apps/portal" },
     { "path": "apps/estoque" },

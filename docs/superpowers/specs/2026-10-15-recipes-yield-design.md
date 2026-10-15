@@ -1,6 +1,6 @@
 # Ciclo 03 — fichas técnicas e rendimentos medidos
 
-**Status:** proposta para revisão humana; ainda não aprovada para implementação  
+**Status:** aprovada em 2026-10-15 para implementação do Ciclo 03  
 **Escopo:** App 01, fichas de produto e pré-preparo, composição, medições versionadas e custo atual consultável.  
 **Base:** V3 DEC-001, DEC-004 a DEC-006 e seção 4; critérios T-11, T-12 e T-16; arquitetura e limites aprovados.
 
@@ -129,4 +129,4 @@ Todos os testes de integração usam Supabase/Postgres de teste real, JWTs sint�
 
 Fora: estoque de produção, consumo/debito, entrada de pré-preparo, fichas de variação/combo (App02), preço/margem/CMV do App02, telas de listas Premium, IA, cobrança, Storage, deploy e banco de produção. A interface de ciclo deste plano é somente a mínima para autor operar ficha e medição no App 01.
 
-Resoluções propostas para revisão (não dependem de dados externos): saída final medida é o denominador de custo pronto; rendimento líquido fica registrado como etapa; componente repetido é permitido com confirmação e justificativa; consulta ao custo da versão atual não usa fallback de versão antiga; medição não movimenta estoque; estimativa nunca valida; arredondamento half-even em 12 casas. O coordenador deve alterar estas regras no spec antes da implementação caso a revisão as rejeite.
+Resoluções aprovadas: saída final medida é o denominador de custo pronto; rendimento líquido fica registrado como etapa; componente repetido é permitido com confirmação e justificativa; consulta ao custo da versão atual não usa fallback de versão antiga; medição não movimenta estoque; estimativa nunca valida; arredondamento half-even em 12 casas.

@@ -1,6 +1,6 @@
 # Plano TDD — Ciclo 03: fichas e rendimentos
 
-**Status:** submetido à revisão humana; implementação depende de aprovação explícita.  
+**Status:** aprovado pelo usuário em 2026-10-15; implementação do Ciclo 03 autorizada.  
 **Spec:** `docs/superpowers/specs/2026-10-15-recipes-yield-design.md`  
 **Branch de planejamento:** `codex/ciclo-03-recipes-yield`, derivada de `codex/ciclo-02-inventory` em `189fcbb`.  
 **Limites:** somente Ciclo 03; coordenador é dono de contratos, migration, integração e PR. Não aplicar migration em produção, publicar deploy, mesclar PR nem iniciar ciclo seguinte.
@@ -90,9 +90,9 @@ Banco sob posse do coordenador:
 
 ### Task 6: Operação mínima no App 01 (após contrato e rotas congelados)
 
-**Teste primeiro:** expandir `tests/e2e/recipe-flow.spec.ts`: proprietário abre fichas, cria rascunho, adiciona linhas de insumo ou pré-preparo, mede bruto/líquido/final, vê estimativa destacada, tentativa de validar sem medição real fica bloqueada com explicação, mede/valida e vê custo/fonte/data; context switch não carrega dados anteriores; tenant B não acessa IDs de A. E2E não substitui integração SQL.
+**Teste primeiro:** expandir `tests/e2e/recipe-flow.spec.ts`: proprietário abre lista filtrável e histórico, cria rascunho, adiciona linhas de insumo ou pré-preparo, mede bruto/líquido/final, vê estimativa destacada, tentativa de validar sem medição real fica bloqueada com explicação, confirma validação, acrescenta nova medição preservando a anterior e vê custo/fonte/data; sem saldo mostra custo indisponível; context switch limpa estado e não aceita submit atrasado; tenant B não acessa IDs de A. Cobrir labels/fieldset, foco de erro, `role=alert` e carregamento `role=status`. E2E não substitui integração SQL.
 
-**Implementar:** `apps/estoque/src/recipes/recipes-client.ts`, `RecipesWorkspace.tsx`, `RecipeEditor.tsx`, `YieldMeasurementForm.tsx`, `RecipeCostPanel.tsx`; incorporar link/estado em `apps/estoque/src/inventory/InventoryWorkspace.tsx` ou roteamento atual em `apps/estoque/src/App.tsx` conforme desenho existente. UI mínima acessível e protegida, sem criar CRUD genérico, lista Premium, IA ou telas de preço/App02.
+**Implementar:** `apps/estoque/src/recipes/recipes-client.ts`, `RecipesWorkspace.tsx`, `RecipeEditor.tsx`, `YieldMeasurementForm.tsx`, `RecipeHistory.tsx`, `RecipeCostPanel.tsx`; incorporar link/estado em `apps/estoque/src/inventory/InventoryWorkspace.tsx` ou roteamento atual em `apps/estoque/src/App.tsx` conforme desenho existente. A lista distingue draft/estimated, validada, versão corrente sem validação e custo indisponível. A medição exibe claramente bruto→líquido→final, unidades e método/data; validação e registro de nova medição são ações diferentes com resumo antes de confirmar. Duplicidade intencional/embalagem repetida informa que cobrará novamente e pede justificativa. UI mínima acessível e protegida, sem criar CRUD genérico, lista Premium, IA ou telas de preço/App02.
 
 **Execução opcional de UI por agente:** depois que contratos/rotas forem congelados, UX agent pode editar apenas `apps/estoque/src/recipes/**`; coordenador faz a integração do shell (App/InventoryWorkspace), revisa diff e executa E2E. Agente não altera contratos, SQL nem serviços.
 

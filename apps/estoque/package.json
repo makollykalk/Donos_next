@@ -10,7 +10,8 @@
   "dependencies": {
     "@donos/auth-client": "workspace:*",
     "react": "19.3.1",
-    "react-dom": "19.3.1"
+    "react-dom": "19.3.1",
+    "@donos/contracts": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "19.3.0",

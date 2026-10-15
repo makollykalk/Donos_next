@@ -11,6 +11,7 @@
       "@donos/domain-core":["./packages/domain-core/src/index.ts"],
       "@donos/domain-billing":["./packages/domain-billing/src/index.ts"],
       "@donos/domain-inventory":["./packages/domain-inventory/src/index.ts"],
+      "@donos/domain-purchases":["./packages/domain-purchases/src/index.ts"],
       "@donos/auth-client":["./packages/auth-client/src/index.ts"]
     }
   },

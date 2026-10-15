@@ -16,8 +16,8 @@ export interface InventoryService {
  listSuppliers(...args:[...Args,query:CatalogQuery]):Promise<Page<Supplier>>;
  listConversions(...args:[...Args,ingredientId:string]):Promise<{items:ConversionVersion[]}>;
  getReceipt(...args:[...Args,receiptId:string]):Promise<ReceiptDetail>;
- listReceipts(...args:[...Args,query:CatalogQuery&{status?:'draft'|'received'|'reversed'}]):Promise<Page<ReceiptHeader>>;
+ listReceipts(...args:[...Args,query:CatalogQuery&{status?:'draft'|'received'|'reversed'|undefined}]):Promise<Page<ReceiptHeader>>;
  listBalances(...args:[...Args,query:CatalogQuery]):Promise<Page<StockBalance>&{totalValue:string}>;
  listMovements(...args:[...Args,ingredientId:string,query:SequenceQuery]):Promise<SequencePage<MovementDTO>>;
- listPriceHistory(...args:[...Args,ingredientId:string,query:SequenceQuery&{supplierId?:string}]):Promise<SequencePage<PriceHistoryDTO>>;
+ listPriceHistory(...args:[...Args,ingredientId:string,query:SequenceQuery&{supplierId?:string|undefined}]):Promise<SequencePage<PriceHistoryDTO>>;
 }

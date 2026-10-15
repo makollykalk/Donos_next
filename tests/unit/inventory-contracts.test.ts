@@ -15,6 +15,8 @@ describe('strict inventory inputs and numeric envelopes',()=>{
     expect(ReceiveReceiptSchema.safeParse({receivedConfirmed:false}).success).toBe(false);
   });
   it('requires receipt lines, uniqueness and explicit zero price reason',()=>{
+    const uuid='abcdefab-1234-4234-8234-abcdefabcdef';
+    expect(CreateReceiptSchema.safeParse({supplierId:id,items:[{...line,ingredientId:uuid},{...line,ingredientId:uuid.toUpperCase()}]}).success).toBe(false);
     expect(CreateReceiptSchema.safeParse({supplierId:id,items:[]}).success).toBe(false);
     expect(CreateReceiptSchema.safeParse({supplierId:id,items:Array.from({length:51},()=>line)}).success).toBe(false);
     expect(CreateReceiptSchema.safeParse({supplierId:id,items:[line,line]}).success).toBe(false);

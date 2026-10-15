@@ -15,6 +15,6 @@ it('não oferece CRUD ou concessão comercial em rotas ainda inexistentes', asyn
   const app = buildApp({});
   try {
     expect((await app.inject({method:'POST',url:'/v1/entitlements',payload:{enabled:true}})).statusCode).toBe(404);
-    expect((await app.inject('/v1/organizations')).statusCode).toBe(404);
+    expect((await app.inject('/v1/organizations')).statusCode).toBe(401);
   } finally { await app.close(); }
 });

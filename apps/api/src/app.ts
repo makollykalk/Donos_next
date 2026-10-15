@@ -7,6 +7,7 @@ import type { AppDependencies } from './http/security.js';
 import { registerErrors } from './http/errors.js';
 import { registerAuth } from './routes/auth.js';
 import { registerContexts } from './routes/contexts.js';
+import { registerOrganizations } from './routes/organizations.js';
 
 export type { AppDependencies } from './http/security.js';
 
@@ -16,6 +17,7 @@ export function buildApp(deps: AppDependencies): FastifyInstance {
   registerErrors(app);
   const services=createServices(deps);
   registerAuth(app,services); registerContexts(app,services);
+  registerOrganizations(app,services);
   app.get('/health', () => ({ status: 'ok' as const }));
   return app;
 }

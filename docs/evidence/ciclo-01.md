@@ -66,3 +66,7 @@ Destino único: `kfthwjrvgslnsjigqnyc`, DONOS Next DEV, criado pelo usuário. Po
 ## Task 4 — Auth e contexto
 
 Testes antes da implementação falharam por módulos ausentes. Unit Auth: **10 PASS** (mesmo bearer, issuer/aud/exp/session/sub, usuário inconsistente/anônimo/não confirmado, indisponibilidade). Integração real **2 arquivos/2 PASS**: JWT adulterado negado, hash/TTL30min, A1 não interpretado como A2, sessão diferente negada; logout idempotente e refresh com mesmo session_id continuam bloqueados pelo banco. Validação usa getClaims + getUser conforme documentação oficial consultada nesta execução. Nenhum token/senha registrado. Rotas me/logout/contexts implementadas, sem logger de requests. API responde no-store e CORS local. Integração de rotas completa é gate da Task5.
+
+## Task 5 — bootstrap/API
+
+API RED funcional: 2 testes falharam (404 em vez de401/201). Após rotas/serviços: **2 PASS**, bootstrap e nova unidade com requisições simultâneas e mesma chave retornaram201/body idêntico; payload divergente409; owner extra400; ID de B404; dono A lista A/C. Testes de rollback adicionados depois como caracterização: **3 PASS**, falhas injetadas antes de unidade, auditoria e resultado idempotente deixam zero empresas parciais. TypeScript build exit0. Hash canônico, INSERT ON CONFLICT antes de efeitos e até duas novas tentativas apenas para40001/40P01. Nenhum provider dentro de retry. Contratos HTTP da spec congelados para UI; capabilities/access serão implementados na Task6 sem mudar DTOs.

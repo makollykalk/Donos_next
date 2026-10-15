@@ -1,6 +1,6 @@
 # Evidências do Ciclo 01
 
-Estado: em execução; ciclo ainda não validado. Autorização: mensagem do usuário “Execute somente o Ciclo 01”, nesta conversa, após entrega do plano. Autorização posterior: Supabase DEV novo na nuvem, em makollykalk's Org, conforme ADR 0002. Produção, projetos preexistentes e custos pagos permanecem fora do escopo.
+Estado em15/10/2026: **gate técnico do Ciclo01 validado no DEV autorizado**, revisão independente sem bloqueador; PR para revisão, sem merge/deploy. Autorização: mensagem “Execute somente o Ciclo01”, após plano, seguida de autorização do DEV cloud novo e remote Donos_next. Usuário aprovou em15/10 a spec/plano Inventory, condicionando execução ao fechamento deste ciclo. Produção, projetos preexistentes e custos pagos permanecem fora do escopo.
 
 ## Preflight
 
@@ -13,8 +13,8 @@ Estado: em execução; ciclo ainda não validado. Autorização: mensagem do usu
 ## Progresso
 
 - Task 1: concluída e revisada no commit `d611c0b`. Harness: Node 24.22.0 baixado do domínio oficial, SHA-256 conferido; pnpm 11.25.0. O wrapper global do pnpm usa Node 24.19.0 internamente, portanto os comandos de verificação passaram a invocar o entrypoint pnpm.mjs com o Node local 24.22.0.
-- Task 2: preparação iniciada após criação pelo usuário do DEV cloud `kfthwjrvgslnsjigqnyc`; get_project e consulta de versão/ausência de tabelas conferidos. Tasks 3–7 ainda não iniciadas; não atravessar o checkpoint SQL sem execução real.
-- Testes T-01/T-02 e RLS real: ainda não executados. T-23 será não aplicável enquanto não houver Storage.
+- Tasks2–7 implementadas e verificadas no DEV novo. As seções históricas abaixo preservam os resultados parciais; o fechamento final é a autoridade sobre o estado atual.
+- T-01 nos endpoints existentes e fundação de T-02: API/JWTs reais A/B, dono A com A/C, contextos A1/A2, SQL como donos_api e FK tripla demonstrados. Compra/saldo T-02 completos pertencem ao Ciclo02; não foram aprovados por antecipação. T-23 não aplicável: consulta real retornou zero buckets Storage.
 
 ## Decisões operacionais
 
@@ -47,6 +47,7 @@ Destino único: `kfthwjrvgslnsjigqnyc`, DONOS Next DEV, criado pelo usuário. Po
 - `tests/integration/sql/tenant-references.sql` via execute_sql → PASS: duas identidades sintéticas em transação, dono A com empresas A/C, dono B com B, unidade A1 isolada de A2/C1/B1, owner/tenant forjados rejeitados, FK composta rejeita cruzamento e audit não permite delete. Transação revertida, sem fixtures persistidas.
 - `get_advisors(type=security)` após M01: nenhuma lint retornada. Isso não substitui os testes acima.
 - Limite: SET ROLE real dentro da sessão do migrador prova policies/grants, mas ainda falta integração por conexão autenticada diretamente como donos_api e JWTs Auth distintos. Task 2 não está integralmente concluída; Task 3 ainda não iniciada.
+- O limite acima era o estado parcial dessa execução; foi resolvido pelo complemento runtime/Auth e pela suíte final abaixo.
 - Conexão TCP direta IPv6 expirou. Session pooler `aws-0-us-east-1.pooler.supabase.com:5432` comprovado por conexão autenticada como `donos_api`, no projeto aprovado. TLS exige rejectUnauthorized e CA oficial; nenhuma verificação foi desabilitada.
 
 ### Complemento Task 2 — conexão real e revisão
@@ -70,3 +71,36 @@ Testes antes da implementação falharam por módulos ausentes. Unit Auth: **10 
 ## Task 5 — bootstrap/API
 
 API RED funcional: 2 testes falharam (404 em vez de401/201). Após rotas/serviços: **2 PASS**, bootstrap e nova unidade com requisições simultâneas e mesma chave retornaram201/body idêntico; payload divergente409; owner extra400; ID de B404; dono A lista A/C. Testes de rollback adicionados depois como caracterização: **3 PASS**, falhas injetadas antes de unidade, auditoria e resultado idempotente deixam zero empresas parciais. TypeScript build exit0. Hash canônico, INSERT ON CONFLICT antes de efeitos e até duas novas tentativas apenas para40001/40P01. Nenhum provider dentro de retry. Contratos HTTP da spec congelados para UI; capabilities/access serão implementados na Task6 sem mudar DTOs.
+
+## Tasks6/7 e fechamento em15/10/2026
+
+Entitlements simulados, capabilities e gates API dos dois apps; metering interno reserve/dispatch/settle/release/unknown, sem provider real. Reservas usam lock organizacional, bigint e savepoint por comando; erro JS/SQL não deixa parcial mesmo se o chamador o capturar. period_start permanece texto exato para preservar microssegundos; updates de counters exigem rowCount1. Testes exercitam última quota concorrente, duplicata, estados terminais, desconhecido, expiração, sobreposição, bucket antigo e assinatura realmente cancelada. Fixtures são de demonstração, não concessão comercial.
+
+Portal e shells independentes implementados com Auth por aba/app, contexto em memória, seleção explícita, proteção de geração contra respostas tardias e API logout antes do signOut local. Primeiro E2E teve8/10; segundo9/10 porque503 no carregamento impedia alcançar a unidade, não porque contexto expirado liberou acesso. Novo teste determinístico RED confirmou ausência de recuperação legível; botão de retry apenas da leitura foi implementado, GREEN e suíte completa11/11. Não há retry automático de escrita. Logs RED/GREEN `.tools/core-ui-retry-red.log` e `.tools/core-ui-retry-green.log`.
+
+O build inicial acionava wrapper pnpm com Node24.19 apesar do processo principal24.22; warning foi observado. `scripts/build.mjs` agora usa process.execPath para tsc/Vite, valida configuração pública e não passa env de DB/secret aos frontends. Build final registrou Node24.22.0, sem esse warning. Public key é pública; senha/URL de DB nunca entram no bundle.
+
+Comandos via Node24.22 local + entrypoint pnpm11.25.0 descritos no README:
+
+| Comando | Resultado real / log ignorado |
+|---|---|
+| pnpm install --frozen-lockfile |exit0; core-frozen-final.log |
+| pnpm typecheck |exit0; core-typecheck-final.log |
+| pnpm lint |exit0, zero warnings; core-lint-final.log; repetido após script build |
+| pnpm test:unit |90 PASS /7 arquivos; core-unit-final.log |
+| pnpm test:integration |28 PASS /13 arquivos,174.45s; core-integration-final.log |
+| pnpm test:e2e |11 PASS,1.5m; core-ui-e2e-final.log; Chromium real, sem retries |
+| pnpm build |exit0, API/pacotes e3apps; core-build-final.log |
+| pnpm audit --json |exit0,249dependências,0 vulnerabilidades em todas as severidades; core-audit-final.json |
+| git diff --check e git diff main --check |exit0 após remover nove linhas vazias finais detectadas na checagem do diff completo |
+| scan local de segredos |152arquivos fonte +6arquivos de bundle,0 vazamentos de credenciais reais conhecidas e0 marcadores DB/runtime no browser |
+
+Integração inclui SQLSTATE40001 real com dois bootstraps SERIALIZABLE e40P01 real por deadlock de locks de teste; ambos passam pelo retry idempotente/rollback no PostgreSQL. Não é só mock. JWT real de B não lista nem cria em A; dono A não mistura A/C; contexto A1 não opera em A2; pool max1 limpa contexto após commit/rollback; logout/refresh e request já autorizada exercitados.
+
+Revisor independente `close_core_review`: leu última delta, confirmou logs/code e executou90unitários/typecheck/lint, sem bloqueador para commit/PR. Agente `close_core_ui` executou E2E em janela exclusiva; coordenador executou integração em outra janela. Nenhum agente alterou SQL nem disputou banco mutável.
+
+Consulta administrativa somente de metadados:11tabelas core,0Storage. Advisor security não reportou ausência de RLS; reportou **Leaked Password Protection Disabled**. [Recurso disponível no Pro ou superior](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection); mantido Free, sem upgrade/custo autorizado. Senhas sintéticas aleatórias não substituem hardening de piloto.
+
+Limitações explícitas: replay completo em Supabase local descartável não executado sem Docker/WSL; migrations foram aplicadas em ordem no DEV inicialmente vazio e histórico conferido, sem reset remoto. Provisionamento administrativo de fixtures foi pelo conector e não pertence à API. Logs locais ignorados não são artefatos públicos de CI. Não houve deploy, merge, produção, legado, cobrança, IA real nem estoque. Retenção de dados sintéticos/segredos locais e Auth/BFF/SSO para piloto continuam decisões operacionais futuras.
+
+As Tasks6/7 compartilham wiring de workspace/API e são integradas num commit coerente; testes e documentação de fechamento ficam identificados na entrega. Próximo código autorizado: somente Inventory após este gate, conforme ADR0003 e plano aprovado. Custo médio canônico ainda precisa de prova no banco no Ciclo02.

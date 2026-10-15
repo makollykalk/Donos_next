@@ -1,6 +1,9 @@
 import type {SupabaseClient} from '@supabase/supabase-js';
 export class ApiFailure extends Error {
-  constructor(readonly status:number,readonly code:string){super(status===503?'Serviço indisponível. Tente novamente.':status===403?'Acesso não concedido para esta empresa.':status===401?'Entre novamente.':status===409?'Contexto expirado ou alterado. Selecione novamente.':'Não foi possível concluir a operação.');}
+  constructor(readonly status:number,readonly code:string){
+    const messages:Record<string,string>={INSUFFICIENT_STOCK:'Saldo insuficiente para esta saída.',REVERSAL_REQUIRES_REVALUATION:'Há movimentos posteriores; este estorno exige revisão de valoração.',REVERSAL_ALREADY_APPLIED:'Este movimento já foi estornado.',IDEMPOTENCY_CONFLICT:'A chave já foi usada com outros dados.',RESOURCE_CONFLICT:'O registro mudou ou não aceita esta operação.',UNIT_INCOMPATIBLE:'Unidade incompatível com o insumo.',QUANTITY_PRECISION:'Quantidade incompatível com a precisão ou fração permitida.',NUMERIC_RANGE:'Valor fora da faixa permitida.',VALUATION_UNDERFLOW:'Custo positivo abaixo da precisão permitida.',VALIDATION_ERROR:'Confira os campos informados.'};
+    super(messages[code]??(status===503?'Serviço indisponível. Tente novamente.':status===403?'Acesso não concedido para esta empresa.':status===401?'Entre novamente.':['CONTEXT_EXPIRED','CONTEXT_MISMATCH'].includes(code)?'Contexto expirado ou alterado. Selecione novamente.':'Não foi possível concluir a operação.'));
+  }
 }
 export function createApiClient(auth:SupabaseClient,baseUrl:string){
   const base=new URL(baseUrl);

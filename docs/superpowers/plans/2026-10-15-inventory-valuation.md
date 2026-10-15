@@ -8,7 +8,7 @@
 
 **Tech Stack:** Node24.22.0, pnpm11.25.0, TypeScript6.0.3, pg8.23.1, Zod4.6.7, Fastify5.12.7, React19.3.1/Vite8.3.4, PostgreSQL17 do DEV autorizado, Vitest5.0.4/Playwright1.64.1. Nenhuma dependência financeira nova.
 
-**Spec:** [2026-10-15-inventory-valuation-design.md](../specs/2026-10-15-inventory-valuation-design.md), com [ADR0003](../../adr/0003-inventory-valuation.md), V3 e T-03..T-10. **Plano proposto, não aprovado; nenhuma tarefa abaixo executada nesta rodada.**
+**Spec:** [2026-10-15-inventory-valuation-design.md](../specs/2026-10-15-inventory-valuation-design.md), com [ADR0003](../../adr/0003-inventory-valuation.md), V3 e T-03..T-10. **Plano aprovado pelo fundador em 15/10/2026, condicionado ao fechamento e à revisão do Ciclo 01. Implementação Inventory não iniciada.**
 
 ## Global Constraints
 
@@ -235,4 +235,4 @@ Tasks2 e3 podem ocorrer em paralelo após Task1: motor só escreve arquivos puro
 | Browser/dependência ausente | Resolver ambiente e repetir; build/unit não substituem E2E/SQL |
 | Projeto/host/role divergente | Abort antes da conexão/mutation; nenhum fallback para legado |
 
-Este plano e a spec foram escritos juntos por solicitação expressa do fundador, para revisão conjunta. A execução por coordenador+agentes especializados já foi escolhida; falta a aprovação do conteúdo e o fechamento do ciclo anterior.
+Este plano e a spec foram escritos juntos por solicitação expressa do fundador, para revisão conjunta. A execução por coordenador+agentes especializados já foi escolhida; conteúdo aprovado em 15/10/2026. O gate técnico do core foi fechado e o PR #1 foi entregue; aguarda revisão humana do core antes da implementação Inventory.

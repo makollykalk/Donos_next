@@ -1,6 +1,6 @@
 # Estoque Base — inventory valuation design
 
-Data: 15/10/2026. **Proposta, aguardando aprovação humana. Sem implementação Inventory nesta rodada.**
+Data: 15/10/2026. **Aprovada pelo fundador em 15/10/2026, condicionada ao fechamento e à revisão do Ciclo 01. Sem implementação Inventory nesta rodada.**
 
 Fontes lidas: [AGENTS](../../../AGENTS.md), [V3](../../01-PRODUTO-V3.md), [arquitetura](../../02-ARQUITETURA-E-LIMITES.md), [T-03 a T-10](../../03-CRITERIOS-DE-ACEITE.md), [roadmap](../../04-ROADMAP.md), [ADR 0001](../../adr/0001-decisoes-arquiteturais.md), [DEV cloud](../../adr/0002-ambiente-supabase-dev-cloud.md) e [ADR 0003 proposta](../../adr/0003-inventory-valuation.md). DEC-001 a DEC-013 não são alteradas.
 
@@ -10,7 +10,7 @@ O dono consegue cadastrar insumo/fornecedor, registrar e confirmar compra recebi
 
 Inclui somente Estoque Base do Ciclo 02. Fora: ficha/rendimento, produção de pré-preparo, contagem/auditoria física/PDF, lista Premium, IA, WhatsApp, motor de preços, transferências entre unidades, múltiplos locais, pedidos/cotações, impostos calculados, cobrança, deploy e produção. App 02 continua independente e não ganha CRUD de estoque.
 
-**Não iniciar código enquanto o Ciclo 01 não estiver fechado e revisado.** Preflight observado nesta rodada: branch `feat/ciclo-01-core-multitenant`; remote novo `https://github.com/makollykalk/Donos_next.git`; alterações de core/UI ainda não commitadas. `.tools/integration-full.log`: 20 testes PASS/11 arquivos; `.tools/usage-edge.log`: mais 5 PASS em execução separada. Não somar essas execuções como uma suíte final. `.tools/e2e-second.log`: 9 PASS/1 FAIL, timeout procurando A1 no caso de contexto expirado; não prova isoladamente falha de isolamento, mas impede declarar o ciclo validado. Fechamento/revisão/relatório/PR do core continuam gates. Não resetar nem sobrescrever essas alterações para começar Inventory.
+**Não iniciar código enquanto o Ciclo 01 não estiver fechado e revisado.** Atualização de fechamento: gate técnico validado com 90 unitários, 28 integrações e 11 E2E aprovados; revisão independente sem bloqueador e [PR #1](https://github.com/makollykalk/Donos_next/pull/1) entregue. Aguarda revisão humana do core antes do código Inventory. O preflight a seguir é histórico, anterior ao fechamento. Preflight observado na rodada de planejamento: branch `feat/ciclo-01-core-multitenant`; remote novo `https://github.com/makollykalk/Donos_next.git`; alterações de core/UI ainda não commitadas. `.tools/integration-full.log`: 20 testes PASS/11 arquivos; `.tools/usage-edge.log`: mais 5 PASS em execução separada. Não somar essas execuções como uma suíte final. `.tools/e2e-second.log`: 9 PASS/1 FAIL, timeout procurando A1 no caso de contexto expirado; não prova isoladamente falha de isolamento, mas impede declarar o ciclo validado. Fechamento/revisão/relatório/PR do core continuam gates. Não resetar nem sobrescrever essas alterações para começar Inventory.
 
 Implementação futura em branch `codex/ciclo-02-inventory`, criada a partir do commit do core aprovado pelo usuário. Aprovar este plano não aprova merge do core nem ignora testes pendentes.
 

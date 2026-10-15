@@ -1,6 +1,6 @@
 # ADR 0003 — Valoração e integridade do estoque Base
 
-Data: 15/10/2026. **Proposta para aprovação; não implementada.** Complementa ADR 0001, respeita DEC-001 a DEC-013 e não muda a fronteira entre os dois apps. Aprovação desta ADR/spec/plano autoriza somente o Ciclo 02, depois do gate do Ciclo 01.
+Data: 15/10/2026. **Aprovada pelo fundador em 15/10/2026, condicionada ao fechamento e à revisão do Ciclo 01; não implementada.** Complementa ADR 0001, respeita DEC-001 a DEC-013 e não muda a fronteira entre os dois apps. Aprovação desta ADR/spec/plano autoriza somente o Ciclo 02, depois do gate do Ciclo 01.
 
 ## Decisão proposta
 

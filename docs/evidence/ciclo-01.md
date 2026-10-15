@@ -104,3 +104,7 @@ Consulta administrativa somente de metadados:11tabelas core,0Storage. Advisor se
 Limitações explícitas: replay completo em Supabase local descartável não executado sem Docker/WSL; migrations foram aplicadas em ordem no DEV inicialmente vazio e histórico conferido, sem reset remoto. Provisionamento administrativo de fixtures foi pelo conector e não pertence à API. Logs locais ignorados não são artefatos públicos de CI. Não houve deploy, merge, produção, legado, cobrança, IA real nem estoque. Retenção de dados sintéticos/segredos locais e Auth/BFF/SSO para piloto continuam decisões operacionais futuras.
 
 As Tasks6/7 compartilham wiring de workspace/API e são integradas num commit coerente; testes e documentação de fechamento ficam identificados na entrega. Próximo código autorizado: somente Inventory após este gate, conforme ADR0003 e plano aprovado. Custo médio canônico ainda precisa de prova no banco no Ciclo02.
+
+## Entrega para revisão humana
+
+PR [#1 — Ciclo 01](https://github.com/makollykalk/Donos_next/pull/1) aberto em 15/10/2026, base main, branch feat/ciclo-01-core-multitenant. Commits funcionais d611c0b, b68171d, 3c64c86, 292045a, 030bab8 e 1ea856f; fechamento documental aafa375. Branch publicada apenas no remote novo. Revisão independente sem bloqueador; merge/deploy não executados. Nova execução dos 90 unitários, typecheck e lint após remoção das linhas finais: todos exit0. O plano Inventory está aprovado condicionalmente; aguarda revisão humana deste PR, conforme gate da sua spec. Nenhum código ou migration Inventory foi iniciado.

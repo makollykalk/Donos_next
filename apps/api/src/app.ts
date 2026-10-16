@@ -13,6 +13,7 @@ import { registerModuleAccess } from './routes/module-access.js';
 import { registerInventory } from './routes/inventory.js';
 import { registerInventoryCounts } from './routes/inventory-counts.js';
 import { registerRecipes } from './routes/recipes.js';
+import { registerPricing } from './routes/pricing.js';
 
 export type { AppDependencies } from './http/security.js';
 
@@ -24,7 +25,7 @@ export function buildApp(deps: AppDependencies): FastifyInstance {
   registerAuth(app,services); registerContexts(app,services);
   registerOrganizations(app,services);
   registerCapabilities(app,services);registerModuleAccess(app,services);
-  registerInventory(app,services); registerInventoryCounts(app,services); registerRecipes(app,services);
+  registerInventory(app,services); registerInventoryCounts(app,services); registerRecipes(app,services); registerPricing(app,services);
   app.get('/health', () => ({ status: 'ok' as const }));
   return app;
 }

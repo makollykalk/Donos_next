@@ -118,4 +118,15 @@ describe('pricing calculation', () => {
     });
     expect(result.ingredientCostExact).toEqual({ numerator: '500000000000', denominator: '3' });
   });
+
+  it('uses_exact_combo_other_variable_cost_when_finding_cent_price', () => {
+    const combo = calculateComboCost({
+      components: [{ variantId: uuid('202'), quantity: '0.1', otherVariableCostPerSale: '7.500000000001', costComponents: [], replacedPackagingPaths: [] }],
+      exclusivePackaging: [],
+    });
+    const quote = calculatePricingQuote(input({ ingredientCostExact: ratio('0'), packagingCostExact: ratio('0'), otherVariableCost: '0',
+      otherVariableCostExact: combo.otherVariableCostExact, rates: [], listPrice: '10', targetContributionMargin: '0.25', targetCmv: null }));
+    expect(combo.otherVariableCostExact).toEqual({ numerator: '7500000000001', denominator: '10' });
+    expect(quote.suggestedPrice).toBe('1.01');
+  });
 });

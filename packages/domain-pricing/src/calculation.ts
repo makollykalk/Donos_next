@@ -14,6 +14,23 @@ import {
   add, compare, decimalFraction, div, exactMoneyFraction, exactMoneyRatio, fraction,
   max, moneyString, mul, priceCeilToCent, sub, type Fraction, zero,
 } from './exact.js';
+import type { PricingCostComponent } from '@donos/contracts';
+
+/** Scale recipe costs to one sale while keeping App 02 per-sale packaging unchanged. */
+export function scalePricingVariantCostComponents(
+  recipeComponents: PricingCostComponent[],
+  app02PackagingComponents: PricingCostComponent[],
+  quantityPerSale: string,
+): PricingCostComponent[] {
+  const multiplier = decimalFraction(quantityPerSale);
+  return [
+    ...recipeComponents.map((component) => ({
+      ...component,
+      costPerFinalUnitExact: exactMoneyRatio(mul(exactMoneyFraction(component.costPerFinalUnitExact), multiplier)),
+    })),
+    ...app02PackagingComponents,
+  ];
+}
 
 export type PricingCalculationErrorCode =
   | 'INVALID_TARGET'
@@ -132,7 +149,9 @@ export const calculatePricingQuote = (rawInput: PricingCalculationInput): Pricin
   const input = PricingCalculationInputSchema.parse(rawInput);
   const ingredients = ensureRange(ratioValue(input.ingredientCostExact));
   const packaging = ensureRange(ratioValue(input.packagingCostExact));
-  const otherVariable = decimalFraction(input.otherVariableCost);
+  const otherVariable = input.otherVariableCostExact
+    ? ensureRange(ratioValue(input.otherVariableCostExact))
+    : decimalFraction(input.otherVariableCost);
   const totalCost = add(add(ingredients, packaging), otherVariable);
   const rates = input.rates;
 

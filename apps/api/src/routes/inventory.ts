@@ -1,5 +1,5 @@
 import type { FastifyInstance,FastifyRequest } from 'fastify';
-import { ContextSelectionSchema,UUIDSchema,CreateIngredientSchema,PatchIngredientSchema,CreateSupplierSchema,PatchSupplierSchema,CreateConversionSchema,CreateReceiptSchema,ReceiveReceiptSchema,IssueSchema,ReversalSchema,CatalogQuerySchema,ReceiptQuerySchema,SequenceQuerySchema,PriceHistoryQuerySchema } from '@donos/contracts';
+import { ContextSelectionSchema,UUIDSchema,CreateIngredientSchema,PatchIngredientSchema,CreateSupplierSchema,PatchSupplierSchema,CreateConversionSchema,CreateReceiptSchema,ReceiveReceiptSchema,IssueSchema,ReversalSchema,CatalogQuerySchema,ReceiptQuerySchema,SequenceQuerySchema,PriceHistoryQuerySchema,StockBalanceQuerySchema,CreateStockLocationSchema,PatchStockLocationSchema } from '@donos/contracts';
 import { DomainError } from '@donos/db';
 import { createInventoryService } from '../services/inventory.js';
 import type { ApiServices } from '../http/security.js';
@@ -15,6 +15,9 @@ export function registerInventory(app:FastifyInstance,s:ApiServices){
  const id=(r:FastifyRequest,key:string)=>validate(UUIDSchema,(r.params as Record<string,string>)[key]);
  const key=(r:FastifyRequest)=>validate(UUIDSchema,r.headers['idempotency-key']);
  const service=()=>createInventoryService(s.database());
+ app.get(base+'/locations',async r=>service().listLocations(...await args(r)));
+ app.post(base+'/locations',async(r,p)=>p.code(201).send(await service().createLocation(...await args(r),validate(CreateStockLocationSchema,r.body),key(r))));
+ app.patch(base+'/locations/:locationId',async r=>service().patchLocation(...await args(r),id(r,'locationId'),validate(PatchStockLocationSchema,r.body),key(r)));
  app.get(base+'/ingredients',async r=>service().listIngredients(...await args(r),validate(CatalogQuerySchema,r.query)));
  app.post(base+'/ingredients',async(r,p)=>p.code(201).send(await service().createIngredient(...await args(r),validate(CreateIngredientSchema,r.body),key(r))));
  app.patch(base+'/ingredients/:ingredientId',async r=>service().patchIngredient(...await args(r),id(r,'ingredientId'),validate(PatchIngredientSchema,r.body),key(r)));
@@ -30,7 +33,7 @@ export function registerInventory(app:FastifyInstance,s:ApiServices){
  app.post(base+'/issues',async(r,p)=>p.code(201).send(await service().issue(...await args(r),validate(IssueSchema,r.body),key(r))));
  app.post(base+'/movements/:movementId/reversal',async(r,p)=>p.code(201).send(await service().reverseIssue(...await args(r),id(r,'movementId'),validate(ReversalSchema,r.body),key(r))));
  app.post(base+'/receipts/:receiptId/reversal',async(r,p)=>p.code(201).send(await service().reverseReceipt(...await args(r),id(r,'receiptId'),validate(ReversalSchema,r.body),key(r))));
- app.get(base+'/balances',async r=>service().listBalances(...await args(r),validate(CatalogQuerySchema,r.query)));
+ app.get(base+'/balances',async r=>service().listBalances(...await args(r),validate(StockBalanceQuerySchema,r.query)));
  app.get(base+'/ingredients/:ingredientId/movements',async r=>service().listMovements(...await args(r),id(r,'ingredientId'),validate(SequenceQuerySchema,r.query)));
  app.get(base+'/ingredients/:ingredientId/price-history',async r=>service().listPriceHistory(...await args(r),id(r,'ingredientId'),validate(PriceHistoryQuerySchema,r.query)));
 }

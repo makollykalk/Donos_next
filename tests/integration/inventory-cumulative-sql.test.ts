@@ -7,7 +7,7 @@ it('SQL reconciles fragmented recurring average 1/3 through exact exhaustion',as
  const f=await createInventoryFixtures();try{
   const s=createInventoryService(f.db),o=inventoryOperations(s,f),i=await o.ingredient(),supplier=await o.supplier();
   const conversion=await s.createConversion(...o.a,i.id,{label:'embalagem 3kg',factorToBase:'3'},randomUUID());
-  const d=await s.createReceipt(...o.a,{supplierId:supplier.id,items:[{ingredientId:i.id,quantity:'1',unit:{kind:'package',conversionId:conversion.id},unitPrice:'1'}]},randomUUID());
+  const d=await s.createReceipt(...o.a,{supplierId:supplier.id,locationId:o.locationId,items:[{ingredientId:i.id,quantity:'1',unit:{kind:'package',conversionId:conversion.id},unitPrice:'1'}]},randomUUID());
   expect((await s.receiveReceipt(...o.a,d.id,{receivedConfirmed:true},randomUUID())).movements[0]?.balance.averageCostRatio).toEqual({numerator:'1',denominator:'3'});
   await o.issue(i.id,'1');await o.issue(i.id,'1');
   expect((await o.issue(i.id,'1')).balance).toMatchObject({quantity:'0',value:'0',referenceQuantity:'0',referenceValue:'0',issuedQuantity:'0',averageCostRatio:null});

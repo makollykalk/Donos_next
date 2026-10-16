@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { QuantityStringSchema, InventoryValueStringSchema, CreateIngredientSchema, CreateReceiptSchema, ReceiveReceiptSchema, IssueSchema } from '@donos/contracts';
+import { QuantityStringSchema, InventoryValueStringSchema, CreateIngredientSchema, CreateReceiptSchema, ReceiveReceiptSchema, IssueSchema, StockLocationSchema } from '@donos/contracts';
 const id='10000000-0000-4000-8000-000000000001';
+const locationId='10000000-0000-4000-8000-000000000009';
 const line={ingredientId:id,quantity:'10',unit:{kind:'standard',code:'kg'},unitPrice:'20'};
 describe('strict inventory inputs and numeric envelopes',()=>{
   it('rejects noncanonical, excessive precision and binary numeric inputs',()=>{
@@ -16,13 +17,21 @@ describe('strict inventory inputs and numeric envelopes',()=>{
   });
   it('requires receipt lines, uniqueness and explicit zero price reason',()=>{
     const uuid='abcdefab-1234-4234-8234-abcdefabcdef';
-    expect(CreateReceiptSchema.safeParse({supplierId:id,items:[{...line,ingredientId:uuid},{...line,ingredientId:uuid.toUpperCase()}]}).success).toBe(false);
-    expect(CreateReceiptSchema.safeParse({supplierId:id,items:[]}).success).toBe(false);
-    expect(CreateReceiptSchema.safeParse({supplierId:id,items:Array.from({length:51},()=>line)}).success).toBe(false);
-    expect(CreateReceiptSchema.safeParse({supplierId:id,items:[line,line]}).success).toBe(false);
-    expect(CreateReceiptSchema.safeParse({supplierId:id,items:[{...line,unitPrice:'0'}]}).success).toBe(false);
-    expect(CreateReceiptSchema.safeParse({supplierId:id,items:[{...line,unitPrice:'0',zeroCostReason:'amostra'}]}).success).toBe(true);
-    expect(CreateReceiptSchema.safeParse({supplierId:id,items:[line],documentDate:'2026-02-30'}).success).toBe(false);
-    expect(CreateReceiptSchema.parse({supplierId:id,items:[line]}).items).toHaveLength(1);
+    expect(CreateReceiptSchema.safeParse({supplierId:id,locationId,items:[{...line,ingredientId:uuid},{...line,ingredientId:uuid.toUpperCase()}]}).success).toBe(false);
+    expect(CreateReceiptSchema.safeParse({supplierId:id,locationId,items:[]}).success).toBe(false);
+    expect(CreateReceiptSchema.safeParse({supplierId:id,locationId,items:Array.from({length:51},()=>line)}).success).toBe(false);
+    expect(CreateReceiptSchema.safeParse({supplierId:id,locationId,items:[line,line]}).success).toBe(false);
+    expect(CreateReceiptSchema.safeParse({supplierId:id,locationId,items:[{...line,unitPrice:'0'}]}).success).toBe(false);
+    expect(CreateReceiptSchema.safeParse({supplierId:id,locationId,items:[{...line,unitPrice:'0',zeroCostReason:'amostra'}]}).success).toBe(true);
+    expect(CreateReceiptSchema.safeParse({supplierId:id,locationId,items:[line],documentDate:'2026-02-30'}).success).toBe(false);
+    expect(CreateReceiptSchema.parse({supplierId:id,locationId,items:[line]}).items).toHaveLength(1);
+  });
+  it('requires a valid location on stock operations and receipt destination',()=>{
+    expect(CreateReceiptSchema.safeParse({supplierId:id,items:[line]}).success).toBe(false);
+    expect(CreateReceiptSchema.safeParse({supplierId:id,locationId,items:[line]}).success).toBe(true);
+    expect(IssueSchema.safeParse({ingredientId:id,quantity:'1',unit:line.unit,reason:'uso'}).success).toBe(false);
+    expect(IssueSchema.safeParse({ingredientId:id,locationId,quantity:'1',unit:line.unit,reason:'uso'}).success).toBe(true);
+    expect(StockLocationSchema.safeParse({id:locationId,organizationId:id,restaurantId:id,name:'Despensa',isDefault:true,archived:false}).success).toBe(true);
+    expect(StockLocationSchema.safeParse({id:locationId,organizationId:id,restaurantId:id,name:' ',isDefault:true,archived:false}).success).toBe(false);
   });
 });

@@ -9,9 +9,9 @@ export function valuationState(row:Record<string,unknown>,prefix='',sequence?:st
  return {quantity:canonicalNumeric(row[`${prefix}quantity`]),value:canonicalNumeric(row[`${prefix}value`]),referenceQuantity:canonicalNumeric(row[`${prefix}reference_quantity`]),referenceValue:canonicalNumeric(row[`${prefix}reference_value`]),issuedQuantity:canonicalNumeric(row[`${prefix}issued_quantity`]),sequence:sequence??String(row.sequence)};
 }
 export function balanceDTO(row:Record<string,unknown>):StockBalance{
- const s=valuationState(row);return {...s,ingredientId:String(row.ingredient_id),lastMovementId:row.last_movement_id as string|null,averageCostRatio:s.quantity==='0'?null:{numerator:s.referenceValue,denominator:s.referenceQuantity}};
+ const s=valuationState(row);return {...s,ingredientId:String(row.ingredient_id),locationId:String(row.location_id),lastMovementId:row.last_movement_id as string|null,averageCostRatio:s.quantity==='0'?null:{numerator:s.referenceValue,denominator:s.referenceQuantity}};
 }
-export async function lockBalance(ctx:RestaurantContext,id:string,tx:Tx):Promise<StockBalance>{
- const row=(await tx.query('select * from core.stock_balances where organization_id=$1 and restaurant_id=$2 and ingredient_id=$3 for update',[ctx.organizationId,ctx.restaurantId,id])).rows[0];
+export async function lockBalance(ctx:RestaurantContext,id:string,locationId:string,tx:Tx):Promise<StockBalance>{
+ const row=(await tx.query('select * from core.stock_balances where organization_id=$1 and restaurant_id=$2 and location_id=$3 and ingredient_id=$4 for update',[ctx.organizationId,ctx.restaurantId,locationId,id])).rows[0];
  if(!row)throw new DomainError('RESOURCE_NOT_FOUND',404);return balanceDTO(row);
 }

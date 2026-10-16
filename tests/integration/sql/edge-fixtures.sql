@@ -28,6 +28,9 @@ insert into core.usage_buckets(organization_id,meter_key,period_start,period_end
 -- Cancelled subscription with previously reserved usage. No real billing.
 insert into core.organizations(id,owner_user_id,name) values('90000000-0000-4000-8000-000000000030','10000000-0000-4000-8000-000000000001','DEV Cancelled fixture') on conflict do nothing;
 insert into core.restaurants(id,organization_id,name) values('90000000-0000-4000-8000-000000000031','90000000-0000-4000-8000-000000000030','DEV Cancelled unit') on conflict do nothing;
+insert into core.stock_locations(organization_id,restaurant_id,name,is_default)
+select r.organization_id,r.id,'Principal',true from core.restaurants r where r.id in('90000000-0000-4000-8000-000000000021','90000000-0000-4000-8000-000000000031')
+and not exists(select 1 from core.stock_locations l where l.organization_id=r.organization_id and l.restaurant_id=r.id and l.is_default and not l.archived);
 insert into core.subscriptions(organization_id,status,starts_at,ends_at)
 select '90000000-0000-4000-8000-000000000030','cancelled','2026-01-01Z','2027-01-01Z' where not exists(select 1 from core.subscriptions where organization_id='90000000-0000-4000-8000-000000000030');
 insert into core.entitlements(organization_id,feature_key,enabled,valid_from,valid_until) values

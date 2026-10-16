@@ -12,7 +12,7 @@ test('owner creates a measured recipe, confirms validation and reads its current
   try {
     const ingredient = await inventory.createIngredient(...args, { name: `Farinha receita ${randomUUID()}`, baseUnit: 'kg', allowFractionalCount: false }, randomUUID());
     const supplier = await inventory.createSupplier(...args, { name: `Fornecedor receita ${randomUUID()}` }, randomUUID());
-    const receipt = await inventory.createReceipt(...args, { supplierId: supplier.id, items: [{ ingredientId: ingredient.id, quantity: '2', unit: { kind: 'standard', code: 'kg' }, unitPrice: '10' }] }, randomUUID());
+    const receipt = await inventory.createReceipt(...args, { supplierId: supplier.id, locationId:fixture.locationId, items: [{ ingredientId: ingredient.id, quantity: '2', unit: { kind: 'standard', code: 'kg' }, unitPrice: '10' }] }, randomUUID());
     await inventory.receiveReceipt(...args, receipt.id, { receivedConfirmed: true }, randomUUID());
     const restaurants = await page.request.get(`http://127.0.0.1:3001/v1/organizations/${fixture.selection.organizationId}/restaurants`, { headers: { Authorization: `Bearer ${fixture.jwt}` } });
     const restaurantBody = await restaurants.json() as { items: { id: string; name: string }[] };

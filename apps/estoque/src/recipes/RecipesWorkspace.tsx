@@ -9,11 +9,12 @@ import {YieldMeasurementForm} from './YieldMeasurementForm.js';
 
 const statusLabel:Record<RecipeSummary['status'],string>={draft:'Rascunho',estimated:'Estimativa não validada',validated:'Rendimento validado',current_version_not_validated:'Nova versão ainda não validada'};
 const failure=(error:unknown)=>error instanceof Error?error.message:'Não foi possível carregar as fichas.';
-export function RecipesWorkspace(props:ProtectedContentProps){
+export function RecipesWorkspace(props:ProtectedContentProps & {locationId:string}){
  const client=useMemo(()=>createRecipesClient(props),[props.api,props.store,props.selection.token]);
  const [recipes,setRecipes]=useState<RecipeSummary[]>([]),[ingredients,setIngredients]=useState<Ingredient[]>([]),[detail,setDetail]=useState<RecipeDetail|null>(null),[cost,setCost]=useState<RecipeCostDTO|null>(null);
  const [loading,setLoading]=useState(true),[detailLoading,setDetailLoading]=useState(false),[costLoading,setCostLoading]=useState(false),[error,setError]=useState(''),[costError,setCostError]=useState(''),[selectedId,setSelectedId]=useState(''),[editing,setEditing]=useState(false),[creating,setCreating]=useState(false);
  const selectionRequest=useRef(0);
+ const selectedIdRef=useRef(selectedId);selectedIdRef.current=selectedId;
  const refreshCatalog=useCallback(async(showLoading=false)=>{
   if(showLoading)setLoading(true);
   try{const list=async()=>{const result:RecipeSummary[]=[];let cursor:string|null=null;do{const page:Page<RecipeSummary>=await client.read<Page<RecipeSummary>>(`/recipes?limit=100${cursor?`&cursor=${cursor}`:''}`);result.push(...page.items);cursor=page.nextCursor;}while(cursor);return result;};const [items,stock]=await Promise.all([list(),client.listIngredients()]);client.assert();setRecipes(items);setIngredients(stock);setError('');}
@@ -24,9 +25,10 @@ export function RecipesWorkspace(props:ProtectedContentProps){
  const openRecipe=useCallback(async(id:string)=>{
   const request=++selectionRequest.current;client.assert();setSelectedId(id);setDetail(null);setCost(null);setDetailLoading(true);setCostLoading(false);setError('');setCostError('');setEditing(false);setCreating(false);
   try{const result=await client.read<RecipeDetail>(`/recipes/${id}`);client.assert();if(request!==selectionRequest.current)return;setDetail(result);setDetailLoading(false);if(!result.currentVersion)setEditing(true);
-   if(result.currentVersion){setCostLoading(true);try{const current=await client.read<RecipeCostDTO>(`/recipes/${id}/cost`);client.assert();if(request===selectionRequest.current)setCost(current);}catch(reason){try{client.assert();if(request===selectionRequest.current)setCostError(failure(reason));}catch{/* Ignore response after a context change. */}}finally{if(request===selectionRequest.current)setCostLoading(false);}}
+   if(result.currentVersion){setCostLoading(true);try{const current=await client.read<RecipeCostDTO>(`/recipes/${id}/cost?locationId=${encodeURIComponent(props.locationId)}`);client.assert();if(request===selectionRequest.current)setCost(current);}catch(reason){try{client.assert();if(request===selectionRequest.current)setCostError(failure(reason));}catch{/* Ignore response after a context change. */}}finally{if(request===selectionRequest.current)setCostLoading(false);}}
   }catch(reason){try{client.assert();if(request===selectionRequest.current){setError(failure(reason));setDetailLoading(false);}}catch{/* Ignore response after a context change. */}}
- },[client]);
+ },[client,props.locationId]);
+ useEffect(()=>{if(selectedIdRef.current)void openRecipe(selectedIdRef.current);},[openRecipe]);
  const onSaved=async(id:string)=>{setCreating(false);setSelectedId(id);await refreshCatalog();await openRecipe(id);};
  const latest=detail?.currentVersion?detail.measurements.find(item=>item.recipeVersionId===detail.currentVersion?.id)??null:null;
  const reloadSelected=()=>{if(selectedId)void refreshCatalog().then(()=>openRecipe(selectedId));};

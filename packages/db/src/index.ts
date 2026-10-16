@@ -5,6 +5,8 @@ export * from './identity-repository.js';
 export * from './idempotency.js';
 export * from './audit-repository.js';
 export * as inventoryCatalog from './inventory-catalog-repository.js';
+export * as stockLocations from './stock-location-repository.js';
+export * as inventoryCounts from './inventory-count-repository.js';
 export * from './inventory-balance-repository.js';
 export * from './inventory-ledger-repository.js';
 export * as purchaseRepository from './purchase-repository.js';

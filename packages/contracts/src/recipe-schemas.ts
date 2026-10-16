@@ -126,7 +126,7 @@ export const RecordYieldMeasurementSchema = z.strictObject({
 });
 
 export const ValidateRecipeMeasurementSchema = z.strictObject({});
-export const RecipeCostQuerySchema = z.strictObject({});
+export const RecipeCostQuerySchema = z.strictObject({ locationId: RecipeUUIDSchema });
 export const RecipeListQuerySchema = z.strictObject({
   limit: z.coerce.number().int().min(1).max(100).optional(),
   cursor: RecipeUUIDSchema.optional(),

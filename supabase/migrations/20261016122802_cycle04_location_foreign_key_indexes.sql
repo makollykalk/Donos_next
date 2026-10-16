@@ -1,0 +1,20 @@
+-- Cover the location-scoped foreign keys added by Cycle 04.
+create index stock_balances_location_scope_idx on core.stock_balances(organization_id,restaurant_id,location_id,ingredient_id);
+create index stock_balances_last_movement_location_idx on core.stock_balances(organization_id,restaurant_id,location_id,ingredient_id,last_movement_id);
+create index purchase_receipt_items_location_receipt_idx on core.purchase_receipt_items(organization_id,restaurant_id,location_id,receipt_id);
+create index purchase_price_history_location_idx on core.purchase_price_history(organization_id,restaurant_id,location_id);
+create index stock_reversals_origin_movement_location_idx on core.stock_reversals(organization_id,restaurant_id,location_id,origin_movement_id);
+create index stock_reversals_origin_receipt_location_idx on core.stock_reversals(organization_id,restaurant_id,location_id,origin_receipt_id);
+create index stock_movements_count_item_location_idx on core.stock_movements(organization_id,restaurant_id,location_id,count_item_id);
+create index stock_movements_receipt_location_idx on core.stock_movements(organization_id,restaurant_id,location_id,ingredient_id,receipt_item_id);
+create index stock_movements_reversal_origin_location_idx on core.stock_movements(organization_id,restaurant_id,location_id,ingredient_id,reversal_of_id);
+create index stock_movements_reversal_location_idx on core.stock_movements(organization_id,restaurant_id,location_id,reversal_id);
+create index inventory_count_items_adjustment_movement_idx on core.inventory_count_items(organization_id,restaurant_id,location_id,ingredient_id,adjustment_movement_id);
+create index inventory_count_items_ingredient_idx on core.inventory_count_items(organization_id,restaurant_id,ingredient_id);
+create index inventory_count_items_last_movement_idx on core.inventory_count_items(organization_id,restaurant_id,location_id,ingredient_id,last_movement_id);
+create index inventory_count_items_validator_idx on core.inventory_count_items(validated_by);
+create index inventory_count_observations_item_idx on core.inventory_count_observations(organization_id,restaurant_id,location_id,count_id,count_item_id);
+create index inventory_count_observations_recorder_idx on core.inventory_count_observations(recorded_by);
+create index inventory_counts_opener_idx on core.inventory_counts(opened_by);
+create index inventory_counts_closer_idx on core.inventory_counts(closed_by);
+create index inventory_counts_canceller_idx on core.inventory_counts(cancelled_by);

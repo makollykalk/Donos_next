@@ -21,8 +21,8 @@ it('real donos_api RLS isolates organization and restaurant contexts and rejects
     expect(a2Rows.items.map((item) => item.id)).not.toContain(recipeA.id);
     expect(bRows.items.map((item) => item.id)).toContain(recipeB.id);
     await expect(createRecipeService(b.db).getRecipe(b.actor, b.selection, b.token, recipeA.id)).rejects.toMatchObject({ code: 'RESOURCE_NOT_FOUND' });
-    await expect(createRecipeService(a2.db).getRecipeCost(a2.actor, a2.selection, a2.token, recipeA.id)).rejects.toMatchObject({ code: 'RESOURCE_NOT_FOUND' });
-    await expect(createRecipeService(b.db).getRecipeCost(b.actor, b.selection, b.token, recipeA.id)).rejects.toMatchObject({ code: 'RESOURCE_NOT_FOUND' });
+    await expect(createRecipeService(a2.db).getRecipeCost(a2.actor, a2.selection, a2.token, recipeA.id, a1.locationId)).rejects.toMatchObject({ code: 'RESOURCE_NOT_FOUND' });
+    await expect(createRecipeService(b.db).getRecipeCost(b.actor, b.selection, b.token, recipeA.id, a1.locationId)).rejects.toMatchObject({ code: 'RESOURCE_NOT_FOUND' });
     await expect(a1.run((_ctx, tx) => tx.query(`insert into core.recipes(organization_id,restaurant_id,kind,name,created_by)
       values($1,$2,'product','forged',$3)`, [b.selection.organizationId, b.selection.restaurantId, a1.actor.userId]))).rejects.toMatchObject({ code: '42501' });
   } finally {

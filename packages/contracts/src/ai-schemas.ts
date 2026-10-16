@@ -7,10 +7,9 @@ export const AiTextProposalStatusSchema = z.enum([
 ]);
 export const AiTextActionSchema = z.enum(['receipt', 'issue']);
 export const AiTextMissingFieldSchema = z.enum([
-  'ingredient', 'quantity', 'unit', 'price', 'reason', 'supplier', 'location',
+  'action', 'ingredient', 'quantity', 'unit', 'price', 'reason', 'supplier', 'location',
 ]);
 
-const text = z.string().trim().min(1);
 const decimalOrNull = (schema: z.ZodType<string>) => schema.nullable();
 
 export const AiTextRequestSchema = z.strictObject({
@@ -19,8 +18,8 @@ export const AiTextRequestSchema = z.strictObject({
 });
 
 export const AiTextCandidateSchema = z.strictObject({
-  action: AiTextActionSchema,
-  ingredientDescription: text.max(120),
+  action: AiTextActionSchema.nullable(),
+  ingredientDescription: z.string().trim().max(120).nullable(),
   quantity: decimalOrNull(QuantityStringSchema),
   unit: z.enum(['kg', 'g', 'L', 'mL', 'un']).nullable(),
   totalPrice: decimalOrNull(PriceStringSchema),
@@ -35,7 +34,7 @@ export const AiTextProposalSchema = z.strictObject({
   organizationId: UUIDSchema,
   restaurantId: UUIDSchema,
   locationId: UUIDSchema,
-  action: AiTextActionSchema,
+  action: AiTextActionSchema.nullable(),
   candidate: AiTextCandidateSchema,
   missingFields: z.array(AiTextMissingFieldSchema),
   status: AiTextProposalStatusSchema,
@@ -44,10 +43,11 @@ export const AiTextProposalSchema = z.strictObject({
   updatedAt: z.iso.datetime(),
   expiresAt: z.iso.datetime(),
   resultId: UUIDSchema.nullable(),
-});
+}).refine(proposal => proposal.action === proposal.candidate.action);
 
 export const AiTextProposalReviewSchema = z.strictObject({
   expectedVersion: z.number().int().positive(),
+  action: AiTextActionSchema.optional(),
   ingredientId: UUIDSchema.optional(),
   supplierId: UUIDSchema.optional(),
   quantity: QuantityStringSchema.optional(),
@@ -63,6 +63,8 @@ export const AiTextProposalConfirmSchema = z.strictObject({
 });
 
 export type AiTextAction = z.infer<typeof AiTextActionSchema>;
+export type AiTextMissingField = z.infer<typeof AiTextMissingFieldSchema>;
+export type AiTextProposalStatus = z.infer<typeof AiTextProposalStatusSchema>;
 export type AiTextCandidate = z.infer<typeof AiTextCandidateSchema>;
 export type AiTextProposal = z.infer<typeof AiTextProposalSchema>;
 export type AiTextProposalReview = z.infer<typeof AiTextProposalReviewSchema>;

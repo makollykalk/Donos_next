@@ -25,6 +25,7 @@ describe('AI text contracts', () => {
     expect(AiTextCandidateSchema.safeParse(candidate).success).toBe(true);
     expect(AiTextCandidateSchema.safeParse({ ...candidate, quantity: 5 }).success).toBe(false);
     expect(AiTextCandidateSchema.safeParse({ ...candidate, sql: 'delete from core.stock' }).success).toBe(false);
+    expect(AiTextCandidateSchema.safeParse({ ...candidate, action: null, ingredientDescription: null }).success).toBe(true);
   });
 
   it('requires complete tenant context and explicit proposal lifecycle fields', () => {

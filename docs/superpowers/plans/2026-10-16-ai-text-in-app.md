@@ -60,7 +60,7 @@
 
 **Interfaces produzidas:**
 
-- `AiTextAction = 'receipt' | 'issue'`; status `interpreting | needs_review | ready | confirmed | discarded | reconciliation_required`.
+- `AiTextAction = 'receipt' | 'issue'`; candidate/proposal action is nullable until the owner resolves ambiguity; status `interpreting | needs_review | ready | confirmed | discarded | reconciliation_required`.
 - `AiTextProposal` contém `id`, `organizationId`, `restaurantId`, `locationId`, `action`, `candidate`, `missingFields`, `status`, `version`, `createdAt`, `updatedAt`, `expiresAt` e `resultId`; não inclui `sourceText` persistido. Candidatos incluem ação, descrição, quantidade/unidade/valores decimais como strings anuláveis, motivo, indicador de ambiguidade e explicações; schema estrito rejeita chaves extras.
 - `extractInventoryText(text: string): AiTextCandidate` é síncrona/determinística; recebe no máximo 2.000 caracteres, retorna somente o DTO de candidato estrito e não acessa rede, SQL, tenant ou autorização.
 - `validateInventoryCandidate(candidate: AiTextCandidate, catalog: readonly InventoryCatalogEntry[], selection: { supplierId?: string; locationId?: string }): ValidatedInventoryProposal` resolve apenas correspondência exata única em catálogo ativo. `InventoryCatalogEntry = { id: string; name: string; baseUnit: 'kg' | 'L' | 'un'; active: boolean }`; resultado contém `ingredientId: string | null`, `unitPrice: string | null`, `missingFields: AiTextMissingField[]` e `status: 'needs_review' | 'ready'`. Preço total é dividido pela quantidade usando inteiros/BigInt e arredondamento half-even para 12 casas decimais; nenhum fornecedor é inferido.

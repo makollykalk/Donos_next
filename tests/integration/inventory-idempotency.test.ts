@@ -10,6 +10,6 @@ it('T05: concurrent receipt retry returns identical result; altered key/body and
   expect(await s.receiveReceipt(...o.a,draft.id,{receivedConfirmed:true},key)).toEqual(a);
   await expect(s.receiveReceipt(...o.a,draft.id,{receivedConfirmed:true},randomUUID())).rejects.toMatchObject({code:'RESOURCE_CONFLICT'});
   await expect(s.receiveReceipt(other.actor,other.selection,other.token,draft.id,{receivedConfirmed:true},key)).rejects.toMatchObject({code:'IDEMPOTENCY_CONFLICT'});
-  expect((await s.listMovements(...o.a,i.id,{})).items).toHaveLength(1);
+  expect((await s.listMovements(...o.a,i.id,{locationId:o.locationId})).items).toHaveLength(1);
  }finally{await f.close();await other.close();}
 },120000);

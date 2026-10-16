@@ -38,4 +38,6 @@ it('recipe schema is context scoped, force-RLS protected, append-only and unavai
     [tables],
   )).rows[0]?.n;
   expect(BigInt(uniqueConstraints ?? '0')).toBeGreaterThanOrEqual(8n);
+  expect((await pool.query("select 1 from information_schema.columns where table_schema='core' and table_name='recipe_cost_snapshot_lines' and column_name='location_id'")).rowCount).toBe(1);
+  expect((await pool.query("select 1 from pg_constraint c join pg_class t on t.oid=c.conrelid join pg_namespace n on n.oid=t.relnamespace where n.nspname='core' and t.relname='recipe_cost_snapshot_lines' and c.contype='f' and pg_get_constraintdef(c.oid) like '%location_id%'")).rowCount).toBeGreaterThan(0);
 });

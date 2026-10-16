@@ -6,8 +6,8 @@ import { createInventoryService } from '../../apps/api/src/services/inventory.js
 it('catalog has immutable base, zero initial stock and serialized conversion versions',async()=>{
  const f=await createInventoryFixtures();try{
   const s=createInventoryService(f.db),o=inventoryOperations(s,f),i=await o.ingredient();
-  expect((await s.listBalances(...o.a,{})).items[0]).toMatchObject({quantity:'0',value:'0',sequence:'0'});
-  expect((await s.listMovements(...o.a,i.id,{})).items).toHaveLength(0);
+  expect((await s.listBalances(...o.a,{locationId:o.locationId})).items[0]).toMatchObject({quantity:'0',value:'0',sequence:'0'});
+  expect((await s.listMovements(...o.a,i.id,{locationId:o.locationId})).items).toHaveLength(0);
   const versions=await Promise.all([s.createConversion(...o.a,i.id,{label:'caixa',factorToBase:'5'},randomUUID()),s.createConversion(...o.a,i.id,{label:'caixa',factorToBase:'4'},randomUUID())]);
   expect(versions.map(v=>v.version).sort()).toEqual(['1','2']);
   await s.patchIngredient(...o.a,i.id,{archived:true},randomUUID());

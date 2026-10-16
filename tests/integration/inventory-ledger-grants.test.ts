@@ -5,7 +5,7 @@ it('COMMIT rejects standalone nonzero projection and rolls it back',async()=>{
  try {
   const id=await f.run(async(ctx,tx)=>{
    const row=(await tx.query("insert into core.ingredients(organization_id,restaurant_id,name,base_unit) values($1,$2,'integrity probe','kg') returning id",[ctx.organizationId,ctx.restaurantId])).rows[0]!;
-   await tx.query('insert into core.stock_balances(organization_id,restaurant_id,ingredient_id) values($1,$2,$3)',[ctx.organizationId,ctx.restaurantId,row.id]);return row.id as string;
+   await tx.query('insert into core.stock_balances(organization_id,restaurant_id,location_id,ingredient_id) values($1,$2,$3,$4)',[ctx.organizationId,ctx.restaurantId,f.locationId,row.id]);return row.id as string;
   });
   await expect(f.run(async(_ctx,tx)=>{
    await tx.query('update core.stock_balances set quantity=1,value=1,reference_quantity=1,reference_value=1 where ingredient_id=$1',[id]);

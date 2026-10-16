@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   CreateRecipeSchema, CreateRecipeVersionSchema, RecordYieldMeasurementSchema,
-  ValidateRecipeMeasurementSchema,
+  ValidateRecipeMeasurementSchema, RecipeCostQuerySchema,
 } from '@donos/contracts';
 
 const organizationId = '10000000-0000-4000-8000-000000000001';
@@ -115,5 +115,12 @@ describe('recipe contracts', () => {
     expect(CreateRecipeVersionSchema.safeParse({
       ...nested, components: [nested.components[0], nested.components[0]],
     }).success).toBe(false);
+  });
+
+  it('requires a valid physical stock location for current recipe cost', () => {
+    const locationId = '10000000-0000-4000-8000-000000000009';
+    expect(RecipeCostQuerySchema.safeParse({}).success).toBe(false);
+    expect(RecipeCostQuerySchema.safeParse({ locationId }).success).toBe(true);
+    expect(RecipeCostQuerySchema.safeParse({ locationId, organizationId }).success).toBe(false);
   });
 });

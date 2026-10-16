@@ -30,7 +30,7 @@ const ratio = (ingredientId: string, numerator: string, denominator: string, seq
 
 type GraphVersion = { version: RecipeVersion; components: RecipeResolvedComponent[] };
 type RecipeCostInput = Parameters<typeof calculateRecipeCost>[0];
-const graph = (rootVersionId: string, versions: Record<string, GraphVersion>, measurements: Record<string, RecipeYieldMeasurement>, balances: Record<string, RecipeBalanceSource>): RecipeCostInput => ({ rootVersionId, versions, measurements, balances, calculatedAt: '2026-10-15T00:00:00.000Z' });
+const graph = (rootVersionId: string, versions: Record<string, GraphVersion>, measurements: Record<string, RecipeYieldMeasurement>, balances: Record<string, RecipeBalanceSource>): RecipeCostInput => ({ locationId: '30000000-0000-4000-8000-000000000001', rootVersionId, versions, measurements, balances, calculatedAt: '2026-10-15T00:00:00.000Z' });
 
 const ids = {
   beef: '10000000-0000-4000-8000-000000000001', onion: '10000000-0000-4000-8000-000000000002',

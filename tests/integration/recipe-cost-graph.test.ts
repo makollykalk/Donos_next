@@ -35,7 +35,7 @@ it('prices three measured products through a shared prep and follows the live in
 
   async function receive(ingredientId: string, supplierId: string, quantity: string, unitPrice: string) {
     const receipt = await inventory.createReceipt(...inventoryArgs, {
-      supplierId,
+      supplierId, locationId: fixture.locationId,
       items: [{ ingredientId, quantity, unit: { kind: 'standard', code: 'kg' }, unitPrice }],
     }, randomUUID());
     await inventory.receiveReceipt(...inventoryArgs, receipt.id, { receivedConfirmed: true }, randomUUID());
@@ -131,7 +131,7 @@ it('prices three measured products through a shared prep and follows the live in
       const definition = { name: product.name, components: product.components, transformations: product.transformations, yield: product.yield };
       const result = await measuredRecipe({ ...definition, kind: 'product' });
       productIds.push(result.recipeId);
-      const cost = await app.inject({ url: `${base}/${result.recipeId}/cost`, headers });
+      const cost = await app.inject({ url: `${base}/${result.recipeId}/cost?locationId=${fixture.locationId}`, headers });
       expect(cost.statusCode, cost.body).toBe(200);
       expect(cost.json()).toMatchObject({
         status: 'available', source: 'inventory_moving_average',
@@ -144,18 +144,18 @@ it('prices three measured products through a shared prep and follows the live in
     }
 
     const cheeseReceipt = await inventory.createReceipt(...inventoryArgs, {
-      supplierId: supplier.id,
+      supplierId: supplier.id, locationId: fixture.locationId,
       items: [{ ingredientId: ingredients.cheese!.id, quantity: '1', unit: { kind: 'standard', code: 'kg' }, unitPrice: '30' }],
     }, randomUUID());
     await inventory.receiveReceipt(...inventoryArgs, cheeseReceipt.id, { receivedConfirmed: true }, randomUUID());
 
     for (const [index, product] of products.entries()) {
-      const cost = await app.inject({ url: `${base}/${productIds[index]}/cost`, headers });
+      const cost = await app.inject({ url: `${base}/${productIds[index]}/cost?locationId=${fixture.locationId}`, headers });
       expect(cost.statusCode, cost.body).toBe(200);
       expect(cost.json()).toMatchObject({ status: 'available', ...product.after });
     }
 
-    const prepCost = await app.inject({ url: `${base}/${prep.recipeId}/cost`, headers });
+    const prepCost = await app.inject({ url: `${base}/${prep.recipeId}/cost?locationId=${fixture.locationId}`, headers });
     expect(prepCost.statusCode, prepCost.body).toBe(200);
     expect(prepCost.json()).toMatchObject({ status: 'available', batchCost: '26', costPerFinalUnit: '14.444444444444' });
   } finally {

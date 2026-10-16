@@ -11,5 +11,6 @@ export async function createInventoryFixtures(name:'a'|'b'='a',organizationId=in
  const unit=await createRestaurant(db,actor,organizationId,{name:`Inventory synthetic ${randomUUID()}`},randomUUID());
  const selection={organizationId,restaurantId:unit.id},selected=await createCore(db).selectContext(actor,selection);
  const run=<T>(fn:Parameters<typeof db.withRestaurantTx<T>>[3])=>db.withRestaurantTx(actor,selection,selected.token,fn);
- return {pool,db,actor,selection,token:selected.token,jwt:auth.token,verify,run,close:()=>pool.end()};
+ const locationId=await run(async(ctx,tx)=>(await tx.query<{id:string}>("select id from core.stock_locations where organization_id=$1 and restaurant_id=$2 and is_default and not archived",[ctx.organizationId,ctx.restaurantId])).rows[0]!.id);
+ return {pool,db,actor,selection,locationId,token:selected.token,jwt:auth.token,verify,run,close:()=>pool.end()};
 }

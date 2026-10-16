@@ -1,7 +1,7 @@
 # Ciclo 07A — Proposta de estoque por texto dentro do App 01
 
 **Data:** 2026-10-16
-**Status:** proposta para revisão humana; nenhum plano TDD ou código iniciado.
+**Status:** spec aprovada pelo fundador em 2026-10-16; plano TDD submetido para revisão humana. Nenhum código iniciado.
 **Aprovação de design em conversa:** fluxo responsivo com texto, interpretação, revisão e confirmação explícita.
 **Base:** DONOS Next V3 (DEC-003, DEC-010, DEC-011, DEC-012 e DEC-013), critérios T-05/T-20/T-21/T-22, `prompts/07-IA.md` e PR #6 merged no commit `d8a9f51`.
 
@@ -48,7 +48,7 @@ Se organização, unidade ou local mudar enquanto a interpretação ou revisão 
 - No recebimento, calcular preço unitário efetivo com aritmética decimal exata. Se o texto informa preço total, dividir pelo valor da quantidade normalizada segundo a precisão canônica; persistir strings decimais e usar as regras atuais de compra/estoque.
 - A seleção de fornecedor é explícita. A V3 e o contrato atual de recebimento exigem fornecedor; não criar fornecedor fictício nem escolher fornecedor por inferência do texto.
 - Na baixa, exigir quantidade, insumo e motivo explícito/corrigido. Não assumir silenciosamente “consumo” ou “perda”.
-- Guardar estado durável da proposta para que o dono possa revisar, corrigir, confirmar ou descartar. Repetir a mesma requisição idempotente retorna a mesma proposta; chave igual com conteúdo/contexto diferente retorna conflito.
+- Guardar estado durável estruturado da proposta para que o dono possa revisar, corrigir, confirmar ou descartar. O texto bruto permanece apenas no estado do formulário no cliente; não é persistido nem registrado em logs. Repetir a mesma requisição idempotente retorna a mesma proposta; chave igual com conteúdo/contexto diferente retorna conflito.
 
 ### Confirmação e movimento
 
@@ -100,14 +100,16 @@ Se organização, unidade ou local mudar enquanto a interpretação ou revisão 
 - Requisição duplicada de proposta chama mock uma vez; chave reutilizada com entrada/contexto divergente conflita. Duas confirmações concorrentes geram no máximo um movimento e uso consistente.
 - Confirmar entrada ou baixa altera proposta, ledger, saldo e auditoria numa transação única; falha injetada causa rollback completo.
 - Entitlement cancelado/ausente, franquia esgotada, ator inválido, unidade/local divergente, proposta de outra organização, versão velha ou estado final não gera movimento nem vazamento.
-- Proposta preserva texto e edição do dono após falha recuperável; mudança de contexto invalida revisão antiga; timeout após dispatch não repete chamada automaticamente.
+- O formulário preserva texto e edição do dono após falha recuperável no cliente; mudança de contexto invalida revisão antiga; timeout após dispatch não repete chamada automaticamente.
 - UI anuncia interpretação/erro/resultado, mantém formulário manual acessível e respeita teclado, foco, leitor de tela e `prefers-reduced-motion`.
 - Nenhum teste é declarado aprovado sem execução observada; nenhum acesso remoto, migration, custo pago ou deploy ocorre neste subciclo sem gate explícito.
 
 ## Decisões a validar nesta revisão
 
-1. **Entitlement/meter:** recomendação provisória é usar o entitlement e medidor já existentes `ai_text_whatsapp` para exercitar a capacidade de texto com mock, sem isso autorizar integração com WhatsApp. Confirmar ou pedir nova chave dedicada a texto no app (o que expande escopo de contratos/migrations e monetização).
-2. **Unidade de proposta:** confirmar o limite de uma ação e um insumo por proposta; frases com múltiplos itens pedem divisão/correção manual.
-3. **Retenção:** aprovar que o plano TDD proponha os campos e prazo mínimo de retenção das propostas antes de código/migration.
+Decisões aprovadas pelo fundador nesta conversa:
 
-Se aprovada, decisões que alterem entitlement/retention serão registradas em ADR antes de código, conforme `AGENTS.md`. Esta spec não autoriza implementação, provedor real, integração paga, WhatsApp, DEV remoto, migration ou deploy.
+1. Reutilizar o entitlement/medidor `ai_text_whatsapp` no protótipo de texto dentro do app; isso não autoriza nem implementa WhatsApp.
+2. Limitar cada proposta inicial a uma ação e um insumo; frases com múltiplos itens pedem divisão/correção manual.
+3. O plano TDD deve propor campos e prazo mínimo de retenção das propostas. Esse prazo ainda requer aprovação explícita antes de migration/código.
+
+As duas primeiras decisões estão registradas em ADR-0006. A política proposta de retenção está no plano e aguarda aprovação explícita antes de migration/código. Esta spec não autoriza implementação, provedor real, integração paga, WhatsApp, DEV remoto, migration ou deploy.

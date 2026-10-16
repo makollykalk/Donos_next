@@ -29,6 +29,9 @@
       "path": "../../packages/domain-inventory"
     },
     {
+      "path": "../../packages/domain-recipes"
+    },
+    {
       "path": "../../packages/domain-purchases"
     }
   ]

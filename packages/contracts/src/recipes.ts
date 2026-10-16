@@ -1,14 +1,15 @@
 import type { z } from 'zod';
-import type { BaseUnit, CostRatio, InputUnit, Ingredient, StockBalance } from './inventory.js';
+import type { CostRatio, InputUnit, Ingredient, StockBalance } from './inventory.js';
 import type {
   CreateRecipeSchema, CreateRecipeVersionSchema, RecipeComponentInputSchema,
-  RecipeKindSchema, RecipeOutputUnitSchema,
+  RecipeKindSchema, RecipeMeasureUnitSchema, RecipeOutputUnitSchema,
   RecipeTransformationInputSchema, RecordYieldMeasurementSchema,
   RecipeYieldTransformationResultSchema, ValidateRecipeMeasurementSchema,
 } from './recipe-schemas.js';
 
 export type RecipeKind = z.infer<typeof RecipeKindSchema>;
 export type RecipeOutputUnit = z.infer<typeof RecipeOutputUnitSchema>;
+export type RecipeMeasureUnit = z.infer<typeof RecipeMeasureUnitSchema>;
 export type RecipeComponentInput = z.infer<typeof RecipeComponentInputSchema>;
 export type RecipeTransformationInput = z.infer<typeof RecipeTransformationInputSchema>;
 export type CreateRecipeInput = z.infer<typeof CreateRecipeSchema>;
@@ -73,7 +74,7 @@ export type RecipeCostDTO = {
 
 export type RecipeResolvedComponent =
   | { kind: 'ingredient'; componentId: string; ingredient: Ingredient; quantity: string; unit: InputUnit; conversion: { factorToBase: string; conversionId: string | null; version: string | null } | null; role: 'ingredient' | 'packaging' }
-  | { kind: 'recipe'; componentId: string; recipeVersionId: string; quantity: string; unit: BaseUnit; role: 'ingredient' | 'packaging' };
+  | { kind: 'recipe'; componentId: string; recipeVersionId: string; quantity: string; unit: RecipeMeasureUnit; role: 'ingredient' | 'packaging' };
 export type RecipeBalanceSource = Pick<StockBalance, 'ingredientId' | 'sequence' | 'lastMovementId' | 'averageCostRatio'>;
 
 export type RecipeErrorCode =

@@ -196,5 +196,12 @@ describe('exact yield-based recipe cost engine', () => {
     expect(() => calculateRecipeCost({ ...base, measurements: { [recipe.id]: { ...measured(recipe.id, '2', '2', '2'), finalQuantity: '0' } } })).toThrow();
     const noStock = graph(recipe.id, { [recipe.id]: { version: recipe, components: [line] } }, { [recipe.id]: measured(recipe.id, '1', '1', '1') }, {});
     expect(calculateRecipeCost(noStock)).toMatchObject({ status: 'unavailable', reason: 'NO_CURRENT_AVERAGE' });
+    const prep = version('60000000-0000-4000-8000-000000000003', 'Pré-preparo sem validação');
+    const parent = { ...recipe, kind: 'product' as const };
+    const missingPrepMeasurement = graph(parent.id, {
+      [parent.id]: { version: parent, components: [nested('prep-line', prep.id, '1')] },
+      [prep.id]: { version: prep, components: [line] },
+    }, { [parent.id]: measured(parent.id, '1', '1', '1') }, { [flour.id]: ratio(flour.id, '2', '1') });
+    expect(calculateRecipeCost(missingPrepMeasurement)).toMatchObject({ status: 'unavailable', reason: 'NO_VALIDATED_MEASUREMENT' });
   });
 });

@@ -109,6 +109,10 @@ describe('recipe contracts', () => {
       kind: 'recipe', recipeVersionId: versionId,
     });
     expect(CreateRecipeVersionSchema.safeParse({
+      ...nested,
+      components: [{ ...nested.components[0], unit: 'g' }],
+    }).success).toBe(true);
+    expect(CreateRecipeVersionSchema.safeParse({
       ...nested, components: [nested.components[0], nested.components[0]],
     }).success).toBe(false);
   });

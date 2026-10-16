@@ -239,6 +239,9 @@ export function calculateRecipeCost(input: RecipeCalculationInput): RecipeCostDT
     if (error instanceof RecipeCalculationError && error.code === 'NO_CURRENT_AVERAGE') {
       return unavailable(input, root.version, 'NO_CURRENT_AVERAGE');
     }
+    if (error instanceof RecipeCalculationError && error.code === 'RECIPE_MEASUREMENT_REQUIRED') {
+      return unavailable(input, root.version, 'NO_VALIDATED_MEASUREMENT');
+    }
     throw error;
   }
 }

@@ -9,6 +9,7 @@ const reason = z.string().trim().min(1).max(240);
 
 export const RecipeKindSchema = z.enum(['product', 'preparation']);
 export const RecipeOutputUnitSchema = BaseUnitSchema;
+export const RecipeMeasureUnitSchema = z.enum(['kg', 'g', 'L', 'mL', 'un']);
 export const RecipeTransformationKindSchema = z.enum(['cleaning', 'cooking', 'loss', 'other']);
 export const RecipeComponentRoleSchema = z.enum(['ingredient', 'packaging']);
 
@@ -28,7 +29,7 @@ const NestedRecipeComponentSchema = z.strictObject({
   kind: z.literal('recipe'),
   recipeVersionId: RecipeUUIDSchema,
   quantity: positiveQuantity,
-  unit: RecipeOutputUnitSchema,
+  unit: RecipeMeasureUnitSchema,
   role: RecipeComponentRoleSchema,
   duplicateUseReason: reason.optional(),
 });
@@ -126,6 +127,11 @@ export const RecordYieldMeasurementSchema = z.strictObject({
 
 export const ValidateRecipeMeasurementSchema = z.strictObject({});
 export const RecipeCostQuerySchema = z.strictObject({});
+export const RecipeListQuerySchema = z.strictObject({
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+  cursor: RecipeUUIDSchema.optional(),
+  includeArchived: z.coerce.boolean().optional(),
+});
 
 export const RecipeCostRatioSchema = z.strictObject({
   numerator: InventoryValueStringSchema,

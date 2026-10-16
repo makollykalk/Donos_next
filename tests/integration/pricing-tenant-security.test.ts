@@ -87,11 +87,17 @@ it('pricing rows isolate organizations and restaurants, reject cross-unit refere
        values($1,$2,$3,$4,'fee','fixed','NaN',null,'per_sale')`,
       [randomUUID(), ctx.organizationId, ctx.restaurantId, channelId],
     ))).rejects.toMatchObject({ code: '23514' });
+    await expect(a1.run((ctx, tx) => tx.query(
+      `insert into core.pricing_simulations(organization_id,restaurant_id,variant_id,combo_id,channel_id,input_snapshot,cost_source_snapshot,
+         channel_snapshot,combo_snapshot,quote,created_by)
+       values($1,$2,$3,null,$4,'{}','{}','{}',null,'{}',$5)`,
+      [ctx.organizationId, ctx.restaurantId, variantId, channelId, a1.actor.userId],
+    ))).rejects.toMatchObject({ code: '23514' });
     const simulationId = await a1.run(async (ctx, tx) => (await tx.query<{ id: string }>(
       `insert into core.pricing_simulations(
-         organization_id,restaurant_id,variant_id,combo_id,channel_id,input_snapshot,cost_source_snapshot,
+         organization_id,restaurant_id,variant_id,combo_id,channel_id,input_snapshot,cost_source_snapshot,variant_snapshot,
          channel_snapshot,combo_snapshot,quote,created_by
-       ) values($1,$2,$3,null,$4,'{}','{}','{}',null,'{}',$5) returning id`,
+       ) values($1,$2,$3,null,$4,'{}','{}','{}','{}',null,'{}',$5) returning id`,
       [ctx.organizationId, ctx.restaurantId, variantId, channelId, a1.actor.userId],
     )).rows[0]!.id);
     for (const operation of ['update', 'delete'] as const) {

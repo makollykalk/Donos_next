@@ -5,8 +5,8 @@ import type {
   PricingCalculationInputSchema, PricingChannelProfileSchema, PricingComboSchema,
   PricingCostBucketsSchema, PricingCostSourceSnapshotSchema, PricingMetricsSchema,
   PricingComboCostInputSchema, PricingPackagingSchema, PricingProductSchema, PricingQuoteSchema, PricingRateSchema,
-  PricingComboComponentCostSnapshotSchema, PricingSimulationSchema, PricingVariantSchema, PricingVariantSummarySchema,
-  PricingVariantCostSourceSchema, UpdatePricingChannelSchema, UpdatePricingComboSchema,
+  PricingComboComponentCostSnapshotSchema, PricingSimulationSchema, PricingVariantSchema, PricingVariantSnapshotSchema, PricingVariantSummarySchema,
+  PricingVariantComboDetailsSchema, PricingVariantCostSourceSchema, UpdatePricingChannelSchema, UpdatePricingComboSchema,
   UpdatePricingProductSchema, UpdatePricingVariantSchema,
 } from './pricing-schemas.js';
 import type { ExactMoneyRatio } from './exact-money.js';
@@ -25,10 +25,12 @@ export type PricingCostBuckets = z.infer<typeof PricingCostBucketsSchema>;
 export type PricingQuote = z.infer<typeof PricingQuoteSchema>;
 export type PricingProduct = z.infer<typeof PricingProductSchema>;
 export type PricingVariant = z.infer<typeof PricingVariantSchema>;
+export type PricingVariantComboDetails = z.infer<typeof PricingVariantComboDetailsSchema>;
 export type PricingVariantSummary = z.infer<typeof PricingVariantSummarySchema>;
 export type PricingChannelProfile = z.infer<typeof PricingChannelProfileSchema>;
 export type PricingCombo = z.infer<typeof PricingComboSchema>;
 export type PricingComboComponentCostSnapshot = z.infer<typeof PricingComboComponentCostSnapshotSchema>;
+export type PricingVariantSnapshot = z.infer<typeof PricingVariantSnapshotSchema>;
 export type PricingSimulation = z.infer<typeof PricingSimulationSchema>;
 export type CreatePricingProductInput = z.infer<typeof CreatePricingProductSchema>;
 export type UpdatePricingProductInput = z.infer<typeof UpdatePricingProductSchema>;

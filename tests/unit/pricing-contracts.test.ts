@@ -5,6 +5,8 @@ import {
   CreatePricingVariantSchema,
   ExactMoneyRatioSchema,
   PricingSimulationSchema,
+  PricingCostSourceSnapshotSchema,
+  PricingVariantSnapshotSchema,
   PricingRateSchema,
 } from '@donos/contracts';
 
@@ -19,6 +21,18 @@ const manualVariant = {
   listPrice: '42.9',
   costSource: { kind: 'manual', ingredientCost: '20', currency: 'BRL' },
   packaging: [{ id: packageId, name: 'Caixa', costPerSale: '0.5' }],
+  otherVariableCost: '2',
+};
+const manualVariantSnapshot = {
+  variantId,
+  name: 'Pizza brotinho',
+  listPrice: '42.9',
+  costSourceSnapshot: { kind: 'manual' as const, ingredientCost: '20', currency: 'BRL' as const, updatedAt: '2026-10-16T12:00:00.000Z' },
+  packaging: [{ id: packageId, name: 'Caixa', costPerSale: '0.5' }],
+  costComponents: [
+    { componentPath: ['manual-ingredient'], role: 'ingredient' as const, costPerFinalUnitExact: { numerator: '20000000000000', denominator: '1' } },
+    { componentPath: [packageId], role: 'packaging' as const, costPerFinalUnitExact: { numerator: '500000000000', denominator: '1' } },
+  ],
   otherVariableCost: '2',
 };
 
@@ -41,16 +55,9 @@ describe('pricing contracts', () => {
 
   it('requires_each_combo_simulation_component_to_snapshot_its_cost_source_and_packaging_override', () => {
     const timestamp = '2026-10-16T12:00:00.000Z';
-    const manualSource = { kind: 'manual' as const, ingredientCost: '2', currency: 'BRL' as const, updatedAt: timestamp };
     const componentSnapshot = {
-      variantId,
+      variantSnapshot: manualVariantSnapshot,
       quantity: '2',
-      costSourceSnapshot: manualSource,
-      costComponents: [{
-        componentPath: [packageId], role: 'packaging' as const,
-        costPerFinalUnitExact: { numerator: '500000000000', denominator: '1' },
-      }],
-      otherVariableCost: '0.25',
       replacedPackagingPaths: [[packageId]],
     };
     const simulation = {
@@ -60,10 +67,11 @@ describe('pricing contracts', () => {
       channelId,
       inputSnapshot: { variantId: null, comboId: '10000000-0000-4000-8000-000000000007', channelId, targetContributionMargin: '0.25', targetCmv: null },
       costSourceSnapshot: null,
+      variantSnapshot: null,
       componentCostSnapshots: [componentSnapshot],
       channelSnapshot: { name: 'Direto', rates: [] },
       comboSnapshot: {
-        id: '10000000-0000-4000-8000-000000000007', name: 'Combo', archivedAt: null, exclusivePackaging: [],
+        id: '10000000-0000-4000-8000-000000000007', name: 'Combo', listPrice: '12', archivedAt: null, exclusivePackaging: [],
         components: [{ variantId, quantity: '2', replacedPackagingPaths: [[packageId]] }],
       },
       quote: {
@@ -77,6 +85,46 @@ describe('pricing contracts', () => {
     expect(PricingSimulationSchema.safeParse({ ...simulation, componentCostSnapshots: [] }).success).toBe(false);
   });
 
+  it('freezes_every_variant_input', () => {
+    expect(PricingVariantSnapshotSchema.parse(manualVariantSnapshot)).toEqual(manualVariantSnapshot);
+    expect(PricingVariantSnapshotSchema.safeParse({ ...manualVariantSnapshot, packaging: [] }).success).toBe(true);
+    expect(PricingVariantSnapshotSchema.safeParse({ ...manualVariantSnapshot, listPrice: '0' }).success).toBe(false);
+    const combo = { name: 'Combo', listPrice: '29.9', components: [{ variantId, quantity: '1', replacedPackagingPaths: [] }], exclusivePackaging: [] };
+    expect(CreatePricingComboSchema.safeParse(combo).success).toBe(true);
+    expect(CreatePricingComboSchema.safeParse({ ...combo, listPrice: '0' }).success).toBe(false);
+  });
+
+  it('reads_preexisting_simulations_without_rewriting_incomplete_legacy_snapshots', () => {
+    const timestamp = '2026-10-16T12:00:00.000Z';
+    const legacy = {
+      id: '10000000-0000-4000-8000-000000000006',
+      variantId,
+      comboId: null,
+      channelId,
+      inputSnapshot: { variantId, comboId: null, channelId, targetContributionMargin: '0.25', targetCmv: null },
+      costSourceSnapshot: { kind: 'manual' as const, ingredientCost: '20', currency: 'BRL' as const, updatedAt: timestamp },
+      variantSnapshot: null,
+      componentCostSnapshots: [],
+      channelSnapshot: { name: 'Direto', rates: [] },
+      comboSnapshot: null,
+      quote: { status: 'available', reason: null, suggestedPrice: '42.9', costBuckets: { ingredients: '20', packaging: '0', otherVariable: '0' }, totalVariableCost: '20', currentPriceMetrics: null, suggestedPriceMetrics: null, rateBreakdown: [] },
+      createdAt: timestamp,
+    };
+    expect(PricingSimulationSchema.parse(legacy).variantSnapshot).toBeNull();
+    const legacyCombo = {
+      ...legacy,
+      variantId: null,
+      comboId: '10000000-0000-4000-8000-000000000007',
+      inputSnapshot: { variantId: null, comboId: '10000000-0000-4000-8000-000000000007', channelId, targetContributionMargin: '0.25', targetCmv: null },
+      costSourceSnapshot: null,
+      componentCostSnapshots: [{
+        variantId, costSourceSnapshot: legacy.costSourceSnapshot, costComponents: [], otherVariableCost: '2', quantity: '1', replacedPackagingPaths: [],
+      }],
+      comboSnapshot: { id: '10000000-0000-4000-8000-000000000007', name: 'Combo', exclusivePackaging: [], components: [{ variantId, quantity: '1', replacedPackagingPaths: [] }], archivedAt: null },
+    };
+    expect(PricingSimulationSchema.parse(legacyCombo).componentCostSnapshots).toHaveLength(1);
+  });
+
   it('requires_recipe_quantity_and_location', () => {
     const source = { kind: 'recipe', recipeId, locationId, quantityPerSale: '1.25' };
     expect(CreatePricingVariantSchema.safeParse({ ...manualVariant, costSource: source }).success).toBe(true);
@@ -88,6 +136,17 @@ describe('pricing contracts', () => {
       ...manualVariant,
       costSource: { kind: 'recipe', recipeId, locationId, quantityPerSale: '0' },
     }).success).toBe(false);
+  });
+
+  it('freezes_recipe_quantity_per_sale_in_the_cost_source_snapshot', () => {
+    const snapshot = {
+      kind: 'recipe', recipeId, recipeVersionId: '10000000-0000-4000-8000-000000000008', locationId,
+      quantityPerSale: '2.5', calculatedAt: '2026-10-16T12:00:00.000Z',
+      unitCostExact: { numerator: '10000000000000', denominator: '1' }, unitCostDisplay: '10', components: [],
+    };
+    expect(PricingCostSourceSnapshotSchema.parse(snapshot)).toEqual(snapshot);
+    const withoutQuantity = Object.fromEntries(Object.entries(snapshot).filter(([key]) => key !== 'quantityPerSale'));
+    expect(PricingCostSourceSnapshotSchema.safeParse(withoutQuantity).success).toBe(false);
   });
 
   it('rejects_invalid_rate_bases_and_percentages', () => {

@@ -77,6 +77,7 @@ export const PricingCostSourceSnapshotSchema = z.discriminatedUnion('kind', [
     recipeId: UUIDSchema,
     recipeVersionId: UUIDSchema,
     locationId: UUIDSchema,
+    quantityPerSale: positiveQuantity,
     calculatedAt: z.iso.datetime(),
     unitCostExact: ExactMoneyRatioSchema,
     unitCostDisplay: money,
@@ -131,6 +132,7 @@ const comboComponents = z.array(z.strictObject({
 })).min(1).max(100);
 const PricingComboFieldsSchema = z.strictObject({
   name,
+  listPrice: positiveMoney,
   components: comboComponents,
   exclusivePackaging: PricingPackagingInputsSchema,
 });
@@ -147,7 +149,7 @@ export const CreatePricingComboSchema = PricingComboFieldsSchema.superRefine(ref
 export const UpdatePricingComboSchema = PricingComboFieldsSchema.partial()
   .refine((value) => Object.keys(value).length > 0, 'Informe pelo menos um campo')
   .superRefine((combo, ctx) => {
-    if (combo.components) refineCombo({ name: combo.name ?? 'Combo', components: combo.components, exclusivePackaging: combo.exclusivePackaging ?? [] }, ctx);
+    if (combo.components) refineCombo({ name: combo.name ?? 'Combo', listPrice: combo.listPrice ?? '1', components: combo.components, exclusivePackaging: combo.exclusivePackaging ?? [] }, ctx);
   });
 
 export const CreatePricingSimulationSchema = z.strictObject({
@@ -163,6 +165,7 @@ export const PricingCalculationInputSchema = z.strictObject({
   ingredientCostExact: ExactMoneyRatioSchema,
   packagingCostExact: ExactMoneyRatioSchema,
   otherVariableCost: money,
+  otherVariableCostExact: ExactMoneyRatioSchema.optional(),
   rates: PricingRateInputsSchema,
   listPrice: positiveMoney,
 }).and(optionalTargets);
@@ -204,7 +207,7 @@ export const PricingQuoteSchema = z.strictObject({
 });
 
 export const PricingVariantSummarySchema = z.strictObject({
-  id: UUIDSchema, name, listPrice: money, status: z.enum(['active', 'archived']),
+  id: UUIDSchema, name, listPrice: money, status: z.enum(['active', 'archived']), costSourceKind: z.enum(['manual', 'recipe']),
 });
 export const PricingVariantSchema = z.strictObject({
   id: UUIDSchema, productId: UUIDSchema, name, listPrice: money,
@@ -212,6 +215,10 @@ export const PricingVariantSchema = z.strictObject({
   packaging: PricingPackagingInputsSchema,
   otherVariableCost: money,
   archivedAt: z.iso.datetime().nullable(),
+});
+export const PricingVariantComboDetailsSchema = PricingVariantSchema.extend({
+  packagingPaths: z.array(z.strictObject({ componentPath, label: z.string().trim().min(1).max(240) })).max(500),
+  packagingPathsAvailable: z.boolean(),
 });
 export const PricingProductSchema = z.strictObject({
   id: UUIDSchema, name, description, archivedAt: z.iso.datetime().nullable(),
@@ -221,18 +228,59 @@ export const PricingChannelProfileSchema = z.strictObject({
   id: UUIDSchema, name, rates: PricingRateInputsSchema, archivedAt: z.iso.datetime().nullable(),
 });
 export const PricingComboSchema = z.strictObject({
-  id: UUIDSchema, name, components: comboComponents, exclusivePackaging: PricingPackagingInputsSchema,
+  id: UUIDSchema, name, listPrice: money.nullable().optional(), components: comboComponents, exclusivePackaging: PricingPackagingInputsSchema,
   archivedAt: z.iso.datetime().nullable(),
 });
 
-export const PricingComboComponentCostSnapshotSchema = z.strictObject({
+export const PricingVariantSnapshotSchema = z.strictObject({
   variantId: UUIDSchema,
-  quantity: positiveQuantity,
+  name,
+  listPrice: positiveMoney,
   costSourceSnapshot: PricingCostSourceSnapshotSchema,
+  packaging: PricingPackagingInputsSchema,
   costComponents: z.array(PricingCostComponentSchema).max(500),
   otherVariableCost: money,
+});
+
+// Historical snapshots written before quantityPerSale was persisted remain readable.
+const LegacyPricingCostSourceSnapshotSchema = z.discriminatedUnion('kind', [
+  ManualCostSourceInputSchema.extend({ updatedAt: z.iso.datetime() }),
+  z.strictObject({
+    kind: z.literal('recipe'),
+    recipeId: UUIDSchema,
+    recipeVersionId: UUIDSchema,
+    locationId: UUIDSchema,
+    calculatedAt: z.iso.datetime(),
+    unitCostExact: ExactMoneyRatioSchema,
+    unitCostDisplay: money,
+    components: z.array(z.strictObject({
+      componentPath: z.array(z.string().min(1).max(120)).min(1).max(32),
+      role: z.enum(['ingredient', 'packaging']),
+      costPerFinalUnitExact: ExactMoneyRatioSchema,
+    })).max(500),
+  }),
+]);
+const PricingHistoricalVariantSnapshotSchema = PricingVariantSnapshotSchema.extend({
+  costSourceSnapshot: LegacyPricingCostSourceSnapshotSchema,
+});
+
+export const PricingComboComponentCostSnapshotSchema = z.strictObject({
+  variantSnapshot: PricingVariantSnapshotSchema,
+  quantity: positiveQuantity,
   replacedPackagingPaths: replacedPaths,
 });
+const LegacyPricingComboComponentCostSnapshotSchema = z.strictObject({
+  variantId: UUIDSchema,
+  costSourceSnapshot: LegacyPricingCostSourceSnapshotSchema,
+  costComponents: z.array(PricingCostComponentSchema).max(500),
+  otherVariableCost: money,
+  quantity: positiveQuantity,
+  replacedPackagingPaths: replacedPaths,
+});
+export const PricingHistoricalComboComponentCostSnapshotSchema = z.union([
+  PricingComboComponentCostSnapshotSchema,
+  LegacyPricingComboComponentCostSnapshotSchema,
+]);
 
 export const PricingSimulationSchema = z.strictObject({
   id: UUIDSchema,
@@ -240,8 +288,9 @@ export const PricingSimulationSchema = z.strictObject({
   comboId: UUIDSchema.nullable(),
   channelId: UUIDSchema,
   inputSnapshot: CreatePricingSimulationSchema,
-  costSourceSnapshot: PricingCostSourceSnapshotSchema.nullable(),
-  componentCostSnapshots: z.array(PricingComboComponentCostSnapshotSchema).max(100),
+  costSourceSnapshot: LegacyPricingCostSourceSnapshotSchema.nullable(),
+  variantSnapshot: PricingHistoricalVariantSnapshotSchema.nullable(),
+  componentCostSnapshots: z.array(PricingHistoricalComboComponentCostSnapshotSchema).max(100),
   channelSnapshot: CreatePricingChannelSchema,
   comboSnapshot: PricingComboSchema.nullable(),
   quote: PricingQuoteSchema,
@@ -252,19 +301,22 @@ export const PricingSimulationSchema = z.strictObject({
     return;
   }
   if (value.variantId !== null) {
-    if (!value.costSourceSnapshot || value.componentCostSnapshots.length !== 0 || value.comboSnapshot !== null) {
-      ctx.addIssue({ code: 'custom', path: ['componentCostSnapshots'], message: 'Simulação de variação exige uma fonte de custo e não aceita snapshot de combo' });
+    if (!value.costSourceSnapshot || (value.variantSnapshot && value.variantSnapshot.costSourceSnapshot.kind !== value.costSourceSnapshot.kind)
+      || value.componentCostSnapshots.length !== 0 || value.comboSnapshot !== null) {
+      ctx.addIssue({ code: 'custom', path: ['variantSnapshot'], message: 'Simulação de variação não aceita snapshot de combo e deve preservar a fonte de custo' });
     }
     return;
   }
   const combo = value.comboSnapshot;
-  if (value.costSourceSnapshot !== null || !combo || value.componentCostSnapshots.length !== combo.components.length) {
+  if (value.costSourceSnapshot !== null || value.variantSnapshot !== null || !combo
+    || value.componentCostSnapshots.length !== combo.components.length) {
     ctx.addIssue({ code: 'custom', path: ['componentCostSnapshots'], message: 'Simulação de combo exige snapshot completo por componente' });
     return;
   }
   for (const [index, component] of value.componentCostSnapshots.entries()) {
     const configured = combo.components[index];
-    if (!configured || component.variantId !== configured.variantId || component.quantity !== configured.quantity
+    const variantId = 'variantSnapshot' in component ? component.variantSnapshot.variantId : component.variantId;
+    if (!configured || variantId !== configured.variantId || component.quantity !== configured.quantity
       || JSON.stringify(component.replacedPackagingPaths) !== JSON.stringify(configured.replacedPackagingPaths)) {
       ctx.addIssue({ code: 'custom', path: ['componentCostSnapshots', index], message: 'Snapshot do componente não corresponde ao combo selecionado' });
     }

@@ -39,9 +39,14 @@ it('keeps combo simulations in product history after the live combo composition 
          values($1,$2,$3,$4,$5::jsonb,$6::jsonb,$7::jsonb,$8::jsonb,$9::jsonb,$10) returning id`,
         [ctx.organizationId, ctx.restaurantId, comboId, channelId,
           JSON.stringify({ variantId: null, comboId, channelId, targetContributionMargin: '0.25', targetCmv: null }),
-          JSON.stringify([{ variantId: originalVariantId, quantity: '1', costSourceSnapshot: { kind: 'manual', ingredientCost: '2', currency: 'BRL', updatedAt: timestamp }, costComponents: [], otherVariableCost: '0', replacedPackagingPaths: [] }]),
+          JSON.stringify([{ variantSnapshot: {
+            variantId: originalVariantId, name: 'Original', listPrice: '10',
+            costSourceSnapshot: { kind: 'manual', ingredientCost: '2', currency: 'BRL', updatedAt: timestamp },
+            packaging: [], costComponents: [{ componentPath: ['manual-ingredient'], role: 'ingredient', costPerFinalUnitExact: { numerator: '2000000000000', denominator: '1' } }],
+            otherVariableCost: '0',
+          }, quantity: '1', replacedPackagingPaths: [] }]),
           JSON.stringify({ name: 'Direct', rates: [] }),
-          JSON.stringify({ id: comboId, name: 'Combo', archivedAt: null, exclusivePackaging: [], components: [{ variantId: originalVariantId, quantity: '1', replacedPackagingPaths: [] }] }),
+          JSON.stringify({ id: comboId, name: 'Combo', listPrice: null, archivedAt: null, exclusivePackaging: [], components: [{ variantId: originalVariantId, quantity: '1', replacedPackagingPaths: [] }] }),
           JSON.stringify({ status: 'available', reason: null, suggestedPrice: '10', costBuckets: { ingredients: '2', packaging: '0', otherVariable: '0' }, totalVariableCost: '2', currentPriceMetrics: null, suggestedPriceMetrics: null, rateBreakdown: [] }),
           fixture.actor.userId],
       )).rows[0]!.id;
@@ -50,12 +55,13 @@ it('keeps combo simulations in product history after the live combo composition 
         `insert into core.pricing_combo_components(organization_id,restaurant_id,combo_id,variant_id,position,quantity)
          values($1,$2,$3,$4,1,2)`, [ctx.organizationId, ctx.restaurantId, comboId, replacementVariantId],
       );
-      return { productId, simulationId };
+      return { productId, simulationId, originalVariantId };
     });
 
     const page = await fixture.run((ctx, tx) => pricingRepository.listPricingSimulations(ctx, ids.productId, { limit: 10 }, tx));
     expect(page.items.map((item) => item.id)).toContain(ids.simulationId);
-    expect(page.items[0]?.componentCostSnapshots[0]?.variantId).not.toBeUndefined();
+    const component = page.items[0]?.componentCostSnapshots[0];
+    expect(component && 'variantSnapshot' in component ? component.variantSnapshot.variantId : null).toBe(ids.originalVariantId);
   } finally {
     await fixture.close();
   }

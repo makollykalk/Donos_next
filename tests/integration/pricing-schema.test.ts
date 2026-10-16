@@ -40,6 +40,12 @@ it('pricing tables are context scoped, FORCE-RLS protected and simulation snapsh
   expect((await pool.query("select has_table_privilege('donos_api','core.pricing_simulations','SELECT') as allowed")).rows[0]?.allowed).toBe(true);
   expect((await pool.query("select has_table_privilege('donos_api','core.pricing_simulations','INSERT') as allowed")).rows[0]?.allowed).toBe(true);
   expect((await pool.query("select has_table_privilege('donos_api','core.pricing_simulations','UPDATE,DELETE,TRUNCATE') as allowed")).rows[0]?.allowed).toBe(false);
+  expect((await pool.query("select has_column_privilege('donos_api','core.pricing_combos','list_price','UPDATE') as allowed")).rows[0]?.allowed).toBe(true);
+  expect((await pool.query("select has_column_privilege('donos_api','core.pricing_combos','created_by','UPDATE') as allowed")).rows[0]?.allowed).toBe(false);
+  const snapshotColumns = (await pool.query(
+    "select column_name,is_nullable from information_schema.columns where table_schema='core' and table_name='pricing_simulations' and column_name='variant_snapshot'",
+  )).rows;
+  expect(snapshotColumns).toEqual([{ column_name: 'variant_snapshot', is_nullable: 'YES' }]);
   for (const table of ['pricing_channel_rates', 'pricing_combo_components']) {
     expect((await pool.query('select has_table_privilege($1,$2,$3) as allowed', ['donos_api', `core.${table}`, 'DELETE'])).rows[0]?.allowed).toBe(true);
   }

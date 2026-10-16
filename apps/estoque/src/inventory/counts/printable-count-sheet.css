@@ -1,0 +1,142 @@
+.count-sheet-print-area {
+  color: #17201d;
+  background: #fff;
+  font: 14px/1.45 Arial, Helvetica, sans-serif;
+}
+
+.count-sheet-toolbar {
+  margin-block: 1rem;
+}
+
+.count-sheet-toolbar button {
+  border: 1px solid #30473e;
+  border-radius: 0.4rem;
+  padding: 0.65rem 0.9rem;
+  color: #fff;
+  background: #30473e;
+  font: inherit;
+  cursor: pointer;
+}
+
+.count-sheet-header {
+  border-bottom: 2px solid #30473e;
+  padding-bottom: 1rem;
+}
+
+.count-sheet-eyebrow {
+  margin: 0;
+  color: #52645c;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.count-sheet-header h1 {
+  margin: 0.25rem 0 1rem;
+  font-size: 1.8rem;
+}
+
+.count-sheet-metadata {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem 1.5rem;
+  margin: 0;
+}
+
+.count-sheet-metadata dt {
+  color: #52645c;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.count-sheet-metadata dd {
+  margin: 0.1rem 0 0;
+  font-weight: 600;
+}
+
+.count-sheet-table {
+  width: 100%;
+  margin-top: 1.25rem;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.count-sheet-table caption {
+  margin-bottom: 0.5rem;
+  text-align: left;
+  font-weight: 700;
+}
+
+.count-sheet-table th,
+.count-sheet-table td {
+  border: 1px solid #8b9891;
+  padding: 0.55rem;
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+.count-sheet-table thead th {
+  background: #edf1ee;
+}
+
+.count-sheet-table th:nth-child(1) { width: 34%; }
+.count-sheet-table th:nth-child(2) { width: 12%; }
+.count-sheet-table th:nth-child(3) { width: 22%; }
+.count-sheet-table th:nth-child(4) { width: 32%; }
+
+.count-sheet-table .count-sheet-quantity {
+  min-height: 2rem;
+}
+
+.count-sheet-footer {
+  margin-top: 2rem;
+  break-inside: avoid;
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 14mm;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .count-sheet-print-area,
+  .count-sheet-print-area * {
+    visibility: visible !important;
+  }
+
+  .count-sheet-print-area {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    color: #000;
+    font-size: 10pt;
+  }
+
+  .count-sheet-toolbar {
+    display: none !important;
+  }
+
+  .count-sheet-header,
+  .count-sheet-table tr {
+    break-inside: avoid;
+  }
+
+  .count-sheet-table thead {
+    display: table-header-group;
+  }
+
+  .count-sheet-table thead th {
+    background: #e8e8e8 !important;
+    print-color-adjust: exact;
+  }
+
+  .count-sheet-footer {
+    margin-top: 14mm;
+  }
+}

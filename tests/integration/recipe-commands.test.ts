@@ -21,9 +21,10 @@ it('T-11/T-16: real owner flow rejects estimates, validates measured yield and r
     const create = await app.inject({ method: 'POST', url: base, headers: { ...headers, 'idempotency-key': randomUUID() }, payload: { name: 'Recipe test', kind: 'product' } });
     expect(create.statusCode, create.body).toBe(201);
     const recipeId = create.json().id as string;
+    const componentId = randomUUID();
     const version = await app.inject({ method: 'POST', url: `${base}/${recipeId}/versions`, headers: { ...headers, 'idempotency-key': randomUUID() }, payload: {
       name: 'Recipe test v1', kind: 'product', outputUnit: 'kg', transformations: [],
-      components: [{ id: randomUUID(), kind: 'ingredient', ingredientId: ingredient.id, quantity: '1', unit: { kind: 'standard', code: 'kg' }, role: 'ingredient' }],
+      components: [{ id: componentId, kind: 'ingredient', ingredientId: ingredient.id, quantity: '1', unit: { kind: 'standard', code: 'kg' }, role: 'ingredient' }],
     } });
     expect(version.statusCode).toBe(201);
 
@@ -32,7 +33,10 @@ it('T-11/T-16: real owner flow rejects estimates, validates measured yield and r
     expect(estimate.statusCode).toBe(201);
     const estimateValidation = await app.inject({ method: 'POST', url: `${base}/${recipeId}/measurements/${estimate.json().id}/validate`, headers: { ...headers, 'idempotency-key': randomUUID() }, payload: {} });
     expect(estimateValidation.statusCode).toBe(400);
-    expect((await app.inject({ url: `${base}/${recipeId}/cost?locationId=${fixture.locationId}`, headers })).json().reason).toBe('NO_VALIDATED_MEASUREMENT');
+    const unavailableCost = await app.inject({ url: `${base}/${recipeId}/cost?locationId=${fixture.locationId}`, headers });
+    expect(unavailableCost.json()).toMatchObject({
+      status: 'unavailable', reason: 'NO_VALIDATED_MEASUREMENT', costPerFinalUnitExact: null, costComponents: [],
+    });
 
     const measured = await app.inject({ method: 'POST', url: `${base}/${recipeId}/measurements`, headers: { ...headers, 'idempotency-key': randomUUID() }, payload: { ...measurementPayload, kind: 'measured', method: 'Balança aferida' } });
     expect(measured.statusCode).toBe(201);
@@ -43,7 +47,15 @@ it('T-11/T-16: real owner flow rejects estimates, validates measured yield and r
     expect(snapshots.rows).toEqual([{ ingredient_id: ingredient.id, occurrence_count: 1 }]);
     const cost = await app.inject({ url: `${base}/${recipeId}/cost?locationId=${fixture.locationId}`, headers });
     expect(cost.statusCode).toBe(200);
-    expect(cost.json()).toMatchObject({ status: 'available', source: 'inventory_moving_average', batchCost: '10', finalYield: { quantity: '1', unit: 'kg' }, costPerFinalUnit: '10' });
+    expect(cost.json()).toMatchObject({
+      status: 'available', source: 'inventory_moving_average', batchCost: '10',
+      finalYield: { quantity: '1', unit: 'kg' }, costPerFinalUnit: '10',
+      costPerFinalUnitExact: { numerator: '10000000000000', denominator: '1' },
+      costComponents: [{
+        componentPath: [componentId], role: 'ingredient',
+        costPerFinalUnitExact: { numerator: '10000000000000', denominator: '1' },
+      }],
+    });
     await expect(fixture.run((ctx, tx) => tx.query(`insert into core.recipe_components(id,organization_id,restaurant_id,recipe_id,recipe_version_id,kind,ingredient_id,quantity,unit,role,factor_to_base)
       values($1,$2,$3,$4,$5,'ingredient',$6,1,'kg','ingredient',1)`, [randomUUID(), ctx.organizationId, ctx.restaurantId, recipeId, version.json().id, ingredient.id]))).rejects.toMatchObject({ code: '23514' });
     const prep = await app.inject({ method: 'POST', url: base, headers: { ...headers, 'idempotency-key': randomUUID() }, payload: { name: 'Unvalidated prep', kind: 'preparation' } });

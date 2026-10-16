@@ -1,13 +1,16 @@
 import type {
   Ingredient,
+  ExactMoneyRatio,
   RecipeBalanceSource,
   RecipeCostDTO,
   RecipeCostStockSource,
+  RecipeCostComponent,
   RecipeMeasureUnit,
   RecipeResolvedComponent,
   RecipeVersion,
   RecipeYieldMeasurement,
 } from '@donos/contracts';
+import { ExactMoneyRatioSchema } from '@donos/contracts';
 import {
   checkedQuantity,
   checkedValue,
@@ -36,7 +39,8 @@ export type RecipeCalculationInput = {
 };
 
 type Rational = { n: bigint; d: bigint };
-type ExpandedCost = { cost: Rational; measurement: RecipeYieldMeasurement; version: RecipeVersion; sources: Map<string, RecipeCostStockSource> };
+type ExpandedCostComponent = { componentPath: string[]; role: RecipeCostComponent['role']; cost: Rational };
+type ExpandedCost = { cost: Rational; components: ExpandedCostComponent[]; measurement: RecipeYieldMeasurement; version: RecipeVersion; sources: Map<string, RecipeCostStockSource> };
 
 const QUANTITY_SCALE_FACTOR = 1_000_000n;
 const MAX_DEPTH = 16;
@@ -165,8 +169,19 @@ function unavailable(input: RecipeCalculationInput, version: RecipeVersion, reas
     status: 'unavailable', reason, recipeId: version.recipeId, recipeVersionId: version.id,
     locationId: input.locationId, measurementId: input.measurements[version.id]?.id ?? null, calculatedAt: input.calculatedAt,
     source: 'inventory_moving_average', currency: 'BRL', finalYield: null, batchCost: null,
-    costPerFinalUnit: null, stockSources: [],
+    costPerFinalUnit: null, costPerFinalUnitExact: null, costComponents: [], stockSources: [],
   };
+}
+
+function exactMoneyRatio(value: Rational): ExactMoneyRatio {
+  if (value.n < 0n || value.n.toString().length > 256 || value.d.toString().length > 256) {
+    throw new RecipeCalculationError('NUMERIC_RANGE');
+  }
+  try {
+    return ExactMoneyRatioSchema.parse({ numerator: value.n.toString(), denominator: value.d.toString() });
+  } catch {
+    throw new RecipeCalculationError('NUMERIC_RANGE');
+  }
 }
 
 function expand(input: RecipeCalculationInput, versionId: string, path: Set<string>, depth: number, counter: { count: number }): ExpandedCost {
@@ -177,6 +192,7 @@ function expand(input: RecipeCalculationInput, versionId: string, path: Set<stri
   path.add(versionId);
   assertDuplicateConfirmation(node.components);
   let total = rational(0n);
+  const components: ExpandedCostComponent[] = [];
   const sources = new Map<string, RecipeCostStockSource>();
   for (const component of node.components) {
     counter.count += 1;
@@ -188,7 +204,9 @@ function expand(input: RecipeCalculationInput, versionId: string, path: Set<stri
       const denominator = quantity(balance.averageCostRatio.denominator);
       const numerator = value(balance.averageCostRatio.numerator);
       if (denominator === 0n) throw new RecipeCalculationError('NO_CURRENT_AVERAGE');
-      total = add(total, rational(baseQuantity * numerator, denominator));
+      const componentCost = rational(baseQuantity * numerator, denominator);
+      total = add(total, componentCost);
+      components.push({ componentPath: [component.componentId], role: component.role, cost: componentCost });
       sources.set(component.ingredient.id, {
         ingredientId: component.ingredient.id,
         sequence: balance.sequence,
@@ -202,11 +220,19 @@ function expand(input: RecipeCalculationInput, versionId: string, path: Set<stri
     const expanded = expand(input, component.recipeVersionId, path, depth + 1, counter);
     const childYield = quantity(expanded.measurement.finalQuantity);
     const componentQuantity = quantity(normalizeNestedQuantity(component.quantity, component.unit, child.version.outputUnit));
-    total = add(total, multiply(expanded.cost, rational(componentQuantity, childYield)));
+    const scale = rational(componentQuantity, childYield);
+    total = add(total, multiply(expanded.cost, scale));
+    for (const childComponent of expanded.components) {
+      components.push({
+        componentPath: [component.componentId, ...childComponent.componentPath],
+        role: component.role === 'packaging' || childComponent.role === 'packaging' ? 'packaging' : 'ingredient',
+        cost: multiply(childComponent.cost, scale),
+      });
+    }
     for (const [id, source] of expanded.sources) sources.set(id, source);
   }
   path.delete(versionId);
-  return { cost: total, measurement: assertMeasured(node.version, input.measurements[versionId]), version: node.version, sources };
+  return { cost: total, components, measurement: assertMeasured(node.version, input.measurements[versionId]), version: node.version, sources };
 }
 
 /** Calculates current recipe cost from exact stock average ratios and real measured final yields. */
@@ -222,6 +248,15 @@ export function calculateRecipeCost(input: RecipeCalculationInput): RecipeCostDT
     const roundedBatch = roundHalfEven(expanded.cost.n, expanded.cost.d);
     const finalYieldCoefficient = quantity(expanded.measurement.finalQuantity);
     const perUnit = roundHalfEven(expanded.cost.n * QUANTITY_SCALE_FACTOR, expanded.cost.d * finalYieldCoefficient);
+    const perUnitExact = rational(expanded.cost.n * QUANTITY_SCALE_FACTOR, expanded.cost.d * finalYieldCoefficient);
+    const costComponents: RecipeCostComponent[] = expanded.components.map((component) => ({
+      componentPath: component.componentPath,
+      role: component.role,
+      costPerFinalUnitExact: exactMoneyRatio(rational(component.cost.n * QUANTITY_SCALE_FACTOR, component.cost.d * finalYieldCoefficient)),
+    }));
+    const reconciled = costComponents.reduce((sum, component) => add(sum, rational(BigInt(component.costPerFinalUnitExact.numerator), BigInt(component.costPerFinalUnitExact.denominator))), rational(0n));
+    if (reconciled.n * perUnitExact.d !== perUnitExact.n * reconciled.d) throw new RecipeCalculationError('NUMERIC_RANGE');
+    const costPerFinalUnitExact = exactMoneyRatio(perUnitExact);
     const batchCost = checkedFormat(roundedBatch);
     const costPerFinalUnit = checkedFormat(perUnit);
     try {
@@ -234,7 +269,7 @@ export function calculateRecipeCost(input: RecipeCalculationInput): RecipeCostDT
       status: 'available', reason: null, recipeId: expanded.version.recipeId, recipeVersionId: expanded.version.id, locationId: input.locationId,
       measurementId: expanded.measurement.id, calculatedAt: input.calculatedAt, source: 'inventory_moving_average',
       currency: 'BRL', finalYield: { quantity: expanded.measurement.finalQuantity, unit: expanded.version.outputUnit },
-      batchCost, costPerFinalUnit, stockSources,
+      batchCost, costPerFinalUnit, costPerFinalUnitExact, costComponents, stockSources,
     };
   } catch (error) {
     if (error instanceof RecipeCalculationError && error.code === 'NO_CURRENT_AVERAGE') {

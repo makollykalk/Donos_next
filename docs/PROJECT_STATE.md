@@ -4,9 +4,10 @@ Atualizado em 2026-10-16.
 
 ## Ciclo atual
 
-- **Ciclo 05 — App 02 Precificação de Produtos e Combos:** spec e plano TDD aprovados pelo fundador; checkpoint documental concluído; implementação ainda não iniciada.
+- **Ciclo 05 — App 02 Precificação de Produtos e Combos:** spec/plano TDD e decisões financeiras aprovados. Task 1 (contratos e cálculo exato) concluída no commit `480a65f`; Task 2 (decomposição exata do custo da ficha) implementada e validada por testes unitários, pronta para commit após revisão independente. Integração DB, API, UI e E2E ainda não iniciadas.
 - Ver [spec aprovada](superpowers/specs/2026-10-16-pricing-design.md), [plano TDD aprovado](superpowers/plans/2026-10-16-pricing.md) e [ADR 0004 aprovada](adr/0004-pricing-incidence-and-combos.md). IMP-016/017 e o vínculo atual da ficha foram aprovados em 2026-10-16; DDL/integração aguardam alvo de banco isolado autorizado.
 - Escopo do prompt: produtos/variações/combos, custo manual ou custo de ficha autorizado, perfis de canal, simulações e snapshots históricos; T-15 a T-18.
+- Verificações do checkout em 2026-10-16: `pnpm test:unit` 159/159, `pnpm typecheck`, `pnpm lint` e `git diff --check` aprovados. Node 24.19.0 emite aviso por estar abaixo do mínimo do projeto. Nenhum teste de integração foi executado.
 
 ## Ciclo anterior e estado Git
 

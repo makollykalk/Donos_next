@@ -104,4 +104,18 @@ describe('pricing calculation', () => {
     expect(result.otherVariableCostExact).toEqual(ratio('2'));
     expect(result.totalCostExact).toEqual(ratio('38'));
   });
+
+  it('scales_recipe_component_ratios_by_fractional_sale_quantity_without_rounding', () => {
+    const result = calculateComboCost({
+      components: [{
+        variantId: uuid('201'), quantity: '0.5', otherVariableCostPerSale: '0', replacedPackagingPaths: [],
+        costComponents: [{
+          componentPath: ['recipe-leaf'], role: 'ingredient',
+          costPerFinalUnitExact: { numerator: '1000000000000', denominator: '3' },
+        }],
+      }],
+      exclusivePackaging: [],
+    });
+    expect(result.ingredientCostExact).toEqual({ numerator: '500000000000', denominator: '3' });
+  });
 });

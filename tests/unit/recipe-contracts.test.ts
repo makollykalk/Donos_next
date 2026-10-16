@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   CreateRecipeSchema, CreateRecipeVersionSchema, RecordYieldMeasurementSchema,
   ValidateRecipeMeasurementSchema, RecipeCostQuerySchema,
+  RecipeCostComponentSchema,
 } from '@donos/contracts';
 
 const organizationId = '10000000-0000-4000-8000-000000000001';
@@ -122,5 +123,17 @@ describe('recipe contracts', () => {
     expect(RecipeCostQuerySchema.safeParse({}).success).toBe(false);
     expect(RecipeCostQuerySchema.safeParse({ locationId }).success).toBe(true);
     expect(RecipeCostQuerySchema.safeParse({ locationId, organizationId }).success).toBe(false);
+  });
+
+  it('requires exact rational cost and stable component paths in the recipe breakdown', () => {
+    const component = {
+      componentPath: [componentId, versionId], role: 'packaging',
+      costPerFinalUnitExact: { numerator: '1000000000000', denominator: '3' },
+    };
+    expect(RecipeCostComponentSchema.parse(component)).toEqual(component);
+    expect(RecipeCostComponentSchema.safeParse({
+      ...component, costPerFinalUnitExact: { numerator: 1, denominator: '3' },
+    }).success).toBe(false);
+    expect(RecipeCostComponentSchema.safeParse({ ...component, componentPath: [] }).success).toBe(false);
   });
 });

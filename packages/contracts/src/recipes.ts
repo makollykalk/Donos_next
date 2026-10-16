@@ -4,8 +4,9 @@ import type {
   CreateRecipeSchema, CreateRecipeVersionSchema, RecipeComponentInputSchema,
   RecipeKindSchema, RecipeMeasureUnitSchema, RecipeOutputUnitSchema,
   RecipeTransformationInputSchema, RecordYieldMeasurementSchema,
-  RecipeYieldTransformationResultSchema, ValidateRecipeMeasurementSchema,
+  RecipeYieldTransformationResultSchema, ValidateRecipeMeasurementSchema, RecipeCostComponentSchema,
 } from './recipe-schemas.js';
+import type { ExactMoneyRatio } from './exact-money.js';
 
 export type RecipeKind = z.infer<typeof RecipeKindSchema>;
 export type RecipeOutputUnit = z.infer<typeof RecipeOutputUnitSchema>;
@@ -17,6 +18,7 @@ export type CreateRecipeVersionInput = z.infer<typeof CreateRecipeVersionSchema>
 export type RecordYieldMeasurementInput = z.infer<typeof RecordYieldMeasurementSchema>;
 export type RecipeYieldTransformationResult = z.infer<typeof RecipeYieldTransformationResultSchema>;
 export type ValidateRecipeMeasurementInput = z.infer<typeof ValidateRecipeMeasurementSchema>;
+export type RecipeCostComponentInput = z.infer<typeof RecipeCostComponentSchema>;
 
 export type RecipeStatus = 'draft' | 'estimated' | 'validated' | 'current_version_not_validated';
 export type RecipeSummary = {
@@ -51,6 +53,11 @@ export type RecipeCostUnavailableReason =
   | 'NO_CURRENT_AVERAGE'
   | 'NO_VALIDATED_MEASUREMENT'
   | 'CURRENT_VERSION_NOT_VALIDATED';
+export type RecipeCostComponent = {
+  componentPath: string[];
+  role: 'ingredient' | 'packaging';
+  costPerFinalUnitExact: ExactMoneyRatio;
+};
 export type RecipeCostStockSource = {
   ingredientId: string;
   sequence: string;
@@ -70,6 +77,8 @@ export type RecipeCostDTO = {
   finalYield: { quantity: string; unit: RecipeOutputUnit } | null;
   batchCost: string | null;
   costPerFinalUnit: string | null;
+  costPerFinalUnitExact: ExactMoneyRatio | null;
+  costComponents: RecipeCostComponent[];
   stockSources: RecipeCostStockSource[];
 };
 

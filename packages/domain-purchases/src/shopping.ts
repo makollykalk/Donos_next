@@ -72,7 +72,7 @@ export function calculateReplenishment(input: ReplenishmentInput): Replenishment
   }
 
   return {
-    critical: balance <= minimum,
+    critical: quantityCoefficient(input.balanceQuantity ?? '0') <= minimum,
     neededBaseQuantity: checkedQuantity(neededBase),
     suggestedPurchaseQuantity: checkedQuantity(purchaseQuantity),
     suggestedBaseQuantity: checkedQuantity(suggestedBase),

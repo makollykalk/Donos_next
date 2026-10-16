@@ -62,6 +62,11 @@ describe('exact replenishment calculation', () => {
     }))).toMatchObject({ neededBaseQuantity: '1.23', suggestedPurchaseQuantity: '1.23', suggestedBaseQuantity: '1.23' });
   });
 
+  it('compares critical quantities numerically rather than lexicographically', () => {
+    expect(calculateReplenishment(input({ balanceQuantity: '2', minimumQuantity: '10' })).critical).toBe(true);
+    expect(calculateReplenishment(input({ balanceQuantity: '10', minimumQuantity: '2' })).critical).toBe(false);
+  });
+
   it('rounds indivisible unit counts upward and reports critical stock at zero', () => {
     const countConversion: ConversionSnapshot = {
       ...conversion('1'), baseUnit: 'un', inputUnit: { kind: 'standard', code: 'un' },

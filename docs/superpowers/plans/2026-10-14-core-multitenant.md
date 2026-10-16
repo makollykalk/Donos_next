@@ -10,7 +10,7 @@
 
 **Spec:** [2026-10-14-core-multitenant-design.md](../specs/2026-10-14-core-multitenant-design.md). Ler junto à [ADR](../../adr/0001-decisoes-arquiteturais.md), V3, aceite, roadmap e AGENTS antes da execução.
 
-Status em 14/10/2026: somente plano. Todas as caixas abaixo estão abertas. Nenhum teste de produto, instalação, SQL, build, commit ou deploy foi executado nesta rodada.
+Status atualizado em15/10/2026: plano executado, gate técnico validado no DEV cloud autorizado pela ADR0002; unit90, integração28 e E2E11 PASS, revisão independente sem bloqueador. As caixas preservam o checklist original; a rastreabilidade de execução, comandos, desvios e limites está em [evidências](../../evidence/ciclo-01.md). Replay Supabase local não executado; sem deploy/merge.
 
 ## Global Constraints
 

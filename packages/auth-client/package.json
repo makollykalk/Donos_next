@@ -1,0 +1,1 @@
+{"name":"@donos/auth-client","version":"0.0.0","private":true,"type":"module","exports":"./src/index.ts","dependencies":{"@donos/contracts":"workspace:*","@supabase/supabase-js":"2.117.3","react":"19.3.1","react-dom":"19.3.1"},"devDependencies":{"@types/react":"19.3.0","@types/react-dom":"19.3.0"}}

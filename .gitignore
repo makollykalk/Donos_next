@@ -1,0 +1,17 @@
+node_modules/
+dist/
+dist-types/
+.tools/
+.local/
+.superpowers/
+.env
+.env.*
+!.env.example
+coverage/
+playwright-report/
+test-results/
+.vitest/
+*.tsbuildinfo
+supabase/.temp/
+supabase/.branches/
+.vercel/

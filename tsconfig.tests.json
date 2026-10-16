@@ -1,0 +1,20 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["node"],
+    "lib":["ES2023","DOM"],
+    "jsx":"react-jsx",
+    "paths": {
+      "@donos/contracts": ["./packages/contracts/src/index.ts"],
+      "@donos/db":["./packages/db/src/index.ts"],
+      "@donos/domain-core":["./packages/domain-core/src/index.ts"],
+      "@donos/domain-billing":["./packages/domain-billing/src/index.ts"],
+      "@donos/domain-inventory":["./packages/domain-inventory/src/index.ts"],
+      "@donos/domain-recipes":["./packages/domain-recipes/src/index.ts"],
+      "@donos/domain-purchases":["./packages/domain-purchases/src/index.ts"],
+      "@donos/auth-client":["./packages/auth-client/src/index.ts"]
+    }
+  },
+  "include": ["tests/**/*.ts", "vitest.config.ts", "vitest.integration.config.ts", "playwright.config.ts"]
+}

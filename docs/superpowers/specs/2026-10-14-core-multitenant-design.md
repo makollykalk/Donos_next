@@ -1,6 +1,6 @@
 # Design do primeiro subprojeto — core multitenant
 
-Data: 14/10/2026. Estado: especificação proposta, aguardando revisão humana. Nenhum componente aqui descrito está implementado. Este documento e o plano são entregues juntos por solicitação expressa do fundador; aprovação desta rodada não é presumida.
+Data original:14/10/2026. Estado em15/10: especificação aprovada e implementada no Ciclo01, com adaptação autorizada de Supabase local para DEV cloud (ADR0002). Testes e limites reais em docs/evidence/ciclo-01.md; este texto preserva o desenho aprovado, não uma afirmação de SaaS comercial pronto.
 
 Referências: [V3](../../01-PRODUTO-V3.md), [arquitetura](../../02-ARQUITETURA-E-LIMITES.md), [aceite](../../03-CRITERIOS-DE-ACEITE.md), [roadmap](../../04-ROADMAP.md), [ADR 0001](../../adr/0001-decisoes-arquiteturais.md).
 

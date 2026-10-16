@@ -33,7 +33,7 @@ Migrations presentes no histórico remoto:
 | `20261016131804` | `cycle04_restaurant_default_location_guard` |
 | `20261016133113` | `cycle04_location_count_archive_lock` |
 
-Consulta final no DEV em 2026-10-16 encontrou 311 unidades e zero violações em cada invariante: unidade sem exatamente um local padrão ativo; saldo sem local válido; movimento sem local válido; recebimento e item com locais distintos; estorno em local distinto da origem; snapshot de custo de receita sem local. A tabela real dos snapshots é `core.recipe_cost_snapshot_lines`.
+Consulta final no DEV em 2026-10-16 encontrou 332 unidades e zero violações em cada invariante: unidade sem exatamente um local padrão ativo; saldo sem local válido; movimento sem local válido; recebimento e item com locais distintos; estorno em local distinto da origem; snapshot de custo de receita sem local. A tabela real dos snapshots é `core.recipe_cost_snapshot_lines`.
 
 A migration final também corrigiu unidades sintéticas criadas por testes de bootstrap anteriores à garantia do local padrão. Ela não removeu registros. O novo teste de bootstrap confirmou o guard diferido no Postgres DEV.
 

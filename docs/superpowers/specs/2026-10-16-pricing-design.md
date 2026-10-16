@@ -24,7 +24,7 @@ O App 02 continua independente do estoque e das compras. Não cria, altera nem c
 - Cada perfil de canal registra taxas percentuais e valores fixos, tributos informados pelo dono, descontos e embalagem com sua unidade de incidência declarada. As metas de margem de contribuição e CMV são configuráveis por produto/variação e canal.
 - Simulação mostra custo-base, bases de incidência, taxas, preço atual, preço sugerido, CMV projetado e margem de contribuição projetada separadamente. Metas inválidas/incompatíveis e entradas fora do domínio geram erro/alerta explícito; nenhum resultado silencioso.
 - Combo soma custos dos componentes nas quantidades selecionadas e custo exclusivo do combo. Embalagens e taxas devem ser contabilizadas uma vez segundo a regra aprovada para o componente e o canal.
-- Simulações são append-only: guardam valores de entrada e resultado usados naquele instante. Alterar preço, custo, produto, combo ou canal não reescreve simulações antigas.
+- Simulações são append-only: guardam valores de entrada e resultado usados naquele instante. Para combo, o snapshot contém uma entrada por variante selecionada com quantidade, fonte e custo exatos, breakdown de componentes, custo variável e caminhos de embalagem substituídos. Alterar preço, custo, produto, combo ou canal não reescreve simulações antigas.
 
 ## Modelo matemático e precisão
 

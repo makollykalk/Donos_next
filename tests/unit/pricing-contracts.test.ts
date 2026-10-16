@@ -4,6 +4,7 @@ import {
   CreatePricingSimulationSchema,
   CreatePricingVariantSchema,
   ExactMoneyRatioSchema,
+  PricingSimulationSchema,
   PricingRateSchema,
 } from '@donos/contracts';
 
@@ -36,6 +37,44 @@ describe('pricing contracts', () => {
     expect(CreatePricingSimulationSchema.safeParse({ ...base, variantId: null, comboId: variantId }).success).toBe(true);
     expect(CreatePricingSimulationSchema.safeParse({ ...base, variantId: null, comboId: null }).success).toBe(false);
     expect(CreatePricingSimulationSchema.safeParse({ ...base, variantId, comboId: variantId }).success).toBe(false);
+  });
+
+  it('requires_each_combo_simulation_component_to_snapshot_its_cost_source_and_packaging_override', () => {
+    const timestamp = '2026-10-16T12:00:00.000Z';
+    const manualSource = { kind: 'manual' as const, ingredientCost: '2', currency: 'BRL' as const, updatedAt: timestamp };
+    const componentSnapshot = {
+      variantId,
+      quantity: '2',
+      costSourceSnapshot: manualSource,
+      costComponents: [{
+        componentPath: [packageId], role: 'packaging' as const,
+        costPerFinalUnitExact: { numerator: '500000000000', denominator: '1' },
+      }],
+      otherVariableCost: '0.25',
+      replacedPackagingPaths: [[packageId]],
+    };
+    const simulation = {
+      id: '10000000-0000-4000-8000-000000000006',
+      variantId: null,
+      comboId: '10000000-0000-4000-8000-000000000007',
+      channelId,
+      inputSnapshot: { variantId: null, comboId: '10000000-0000-4000-8000-000000000007', channelId, targetContributionMargin: '0.25', targetCmv: null },
+      costSourceSnapshot: null,
+      componentCostSnapshots: [componentSnapshot],
+      channelSnapshot: { name: 'Direto', rates: [] },
+      comboSnapshot: {
+        id: '10000000-0000-4000-8000-000000000007', name: 'Combo', archivedAt: null, exclusivePackaging: [],
+        components: [{ variantId, quantity: '2', replacedPackagingPaths: [[packageId]] }],
+      },
+      quote: {
+        status: 'available', reason: null, suggestedPrice: '12', costBuckets: { ingredients: '4', packaging: '0', otherVariable: '0.5' },
+        totalVariableCost: '4.5', currentPriceMetrics: null, suggestedPriceMetrics: null, rateBreakdown: [],
+      },
+      createdAt: timestamp,
+    };
+    const parsed = PricingSimulationSchema.safeParse(simulation);
+    expect(parsed.success, JSON.stringify(parsed.success ? [] : parsed.error.issues)).toBe(true);
+    expect(PricingSimulationSchema.safeParse({ ...simulation, componentCostSnapshots: [] }).success).toBe(false);
   });
 
   it('requires_recipe_quantity_and_location', () => {

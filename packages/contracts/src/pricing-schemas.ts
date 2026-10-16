@@ -224,16 +224,50 @@ export const PricingComboSchema = z.strictObject({
   id: UUIDSchema, name, components: comboComponents, exclusivePackaging: PricingPackagingInputsSchema,
   archivedAt: z.iso.datetime().nullable(),
 });
+
+export const PricingComboComponentCostSnapshotSchema = z.strictObject({
+  variantId: UUIDSchema,
+  quantity: positiveQuantity,
+  costSourceSnapshot: PricingCostSourceSnapshotSchema,
+  costComponents: z.array(PricingCostComponentSchema).max(500),
+  otherVariableCost: money,
+  replacedPackagingPaths: replacedPaths,
+});
+
 export const PricingSimulationSchema = z.strictObject({
   id: UUIDSchema,
   variantId: UUIDSchema.nullable(),
   comboId: UUIDSchema.nullable(),
   channelId: UUIDSchema,
   inputSnapshot: CreatePricingSimulationSchema,
-  costSourceSnapshot: PricingCostSourceSnapshotSchema,
+  costSourceSnapshot: PricingCostSourceSnapshotSchema.nullable(),
+  componentCostSnapshots: z.array(PricingComboComponentCostSnapshotSchema).max(100),
   channelSnapshot: CreatePricingChannelSchema,
   comboSnapshot: PricingComboSchema.nullable(),
   quote: PricingQuoteSchema,
   createdAt: z.iso.datetime(),
-}).refine((value) => (value.variantId === null) !== (value.comboId === null), 'Escolha exatamente uma variação ou combo');
+}).superRefine((value, ctx) => {
+  if ((value.variantId === null) === (value.comboId === null)) {
+    ctx.addIssue({ code: 'custom', path: ['variantId'], message: 'Escolha exatamente uma variação ou combo' });
+    return;
+  }
+  if (value.variantId !== null) {
+    if (!value.costSourceSnapshot || value.componentCostSnapshots.length !== 0 || value.comboSnapshot !== null) {
+      ctx.addIssue({ code: 'custom', path: ['componentCostSnapshots'], message: 'Simulação de variação exige uma fonte de custo e não aceita snapshot de combo' });
+    }
+    return;
+  }
+  const combo = value.comboSnapshot;
+  if (value.costSourceSnapshot !== null || !combo || value.componentCostSnapshots.length !== combo.components.length) {
+    ctx.addIssue({ code: 'custom', path: ['componentCostSnapshots'], message: 'Simulação de combo exige snapshot completo por componente' });
+    return;
+  }
+  for (const [index, component] of value.componentCostSnapshots.entries()) {
+    const configured = combo.components[index];
+    if (!configured || component.variantId !== configured.variantId || component.quantity !== configured.quantity
+      || JSON.stringify(component.replacedPackagingPaths) !== JSON.stringify(configured.replacedPackagingPaths)) {
+      ctx.addIssue({ code: 'custom', path: ['componentCostSnapshots', index], message: 'Snapshot do componente não corresponde ao combo selecionado' });
+    }
+  }
+});
 

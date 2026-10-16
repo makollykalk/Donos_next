@@ -12,14 +12,15 @@
 
 ## Ciclo 05 — App 02 Precificação de Produtos e Combos
 
-- **Estado:** decisões e plano aprovados na branch `codex/ciclo-05-pricing`. Task 1 (contratos e cálculo exato) foi commitada em `480a65f`. Task 2 (custo exato por componente da ficha) foi commitada em `c4872f1`, revisada independentemente e validada por unidade; integração com banco não executada. Tasks 3–6 não iniciadas porque o helper de integração aponta para DEV hospedado e não há alvo local descartável nem autorização específica para DEV no Ciclo 05.
+- **Estado:** decisões e plano aprovados na branch `codex/ciclo-05-pricing`. Task 1 foi commitada em `480a65f`; Task 2, em `c4872f1`, revisada independentemente e validada por unidade. Task 3 foi implementada no checkout atual, revisada independentemente e validada no DEV autorizado `kfthwjrvgslnsjigqnyc`; a migration foi aditiva e não houve reset.
 - **Prompt:** `prompts/05-PRECIFICACAO.md`; critérios T-15 a T-18 e decisões pendentes IMP-016/IMP-017.
 - **Spec:** `docs/superpowers/specs/2026-10-16-pricing-design.md`; aprovada pelo fundador em 2026-10-16.
 - **Plano TDD:** `docs/superpowers/plans/2026-10-16-pricing.md`; aprovado pelo fundador em 2026-10-16.
 - **Decisões financeiras:** fundador confirmou IMP-016/017 e vínculo à versão corrente validada/local escolhido em 2026-10-16; ADR `docs/adr/0004-pricing-incidence-and-combos.md` aprovada.
-- **Gate de banco:** sem Docker/Podman e sem alvo local comprovado; integração/DDL aguardam ambiente local descartável ou autorização específica para DEV deste ciclo.
-- **Verificação local:** 159 testes unitários passaram; typecheck, lint e `git diff --check` passaram em 2026-10-16. Node 24.19.0 abaixo do requisito `>=24.22.0 <25`, com aviso do package manager. A regressão de integração da receita foi escrita, mas não executada por causa do gate.
-- **Limites:** nenhuma integração remota, produção, legado, cobrança real ou integração paga autorizada para este ciclo.
+- **Gate de banco:** autorização C05-DEV registrada em `docs/DECISIONS.md`; `.local/dev.json` confirmou o projeto `kfthwjrvgslnsjigqnyc`. Migration `20261016144858_cycle05_pricing` aplicada sem reset; histórico remoto confirmou a versão registrada.
+- **Verificação Task 3:** `pricing-schema.test.ts`, `pricing-tenant-security.test.ts` e `pricing-history-snapshot.test.ts` passaram 3/3 no DEV com fixtures sintéticas; `pnpm test:unit` passou 160/160; typecheck, lint e `git diff --check` passaram. Node 24.19.0 abaixo do requisito `>=24.22.0 <25`, com aviso do package manager.
+- **Advisors após migration:** sem advisory de segurança nas novas tabelas; permanece `auth_leaked_password_protection` WARN preexistente. Há avisos INFO de FKs sem índice (incluindo algumas novas FKs de autoria/local) e índices recém-criados ainda não usados.
+- **Limites:** autorização remota limitada a testes e migrations aditivas no DEV acima. Sem produção, legado, reset, cobrança real, integração paga ou deploy.
 
 ## Ciclos anteriores
 

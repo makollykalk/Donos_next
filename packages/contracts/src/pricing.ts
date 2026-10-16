@@ -5,7 +5,7 @@ import type {
   PricingCalculationInputSchema, PricingChannelProfileSchema, PricingComboSchema,
   PricingCostBucketsSchema, PricingCostSourceSnapshotSchema, PricingMetricsSchema,
   PricingComboCostInputSchema, PricingPackagingSchema, PricingProductSchema, PricingQuoteSchema, PricingRateSchema,
-  PricingSimulationSchema, PricingVariantSchema, PricingVariantSummarySchema,
+  PricingComboComponentCostSnapshotSchema, PricingSimulationSchema, PricingVariantSchema, PricingVariantSummarySchema,
   PricingVariantCostSourceSchema, UpdatePricingChannelSchema, UpdatePricingComboSchema,
   UpdatePricingProductSchema, UpdatePricingVariantSchema,
 } from './pricing-schemas.js';
@@ -28,6 +28,7 @@ export type PricingVariant = z.infer<typeof PricingVariantSchema>;
 export type PricingVariantSummary = z.infer<typeof PricingVariantSummarySchema>;
 export type PricingChannelProfile = z.infer<typeof PricingChannelProfileSchema>;
 export type PricingCombo = z.infer<typeof PricingComboSchema>;
+export type PricingComboComponentCostSnapshot = z.infer<typeof PricingComboComponentCostSnapshotSchema>;
 export type PricingSimulation = z.infer<typeof PricingSimulationSchema>;
 export type CreatePricingProductInput = z.infer<typeof CreatePricingProductSchema>;
 export type UpdatePricingProductInput = z.infer<typeof UpdatePricingProductSchema>;

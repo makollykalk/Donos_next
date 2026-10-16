@@ -12,7 +12,7 @@
 
 ## Ciclo 05 — App 02 Precificação de Produtos e Combos
 
-- **Estado:** decisões e plano aprovados na branch `codex/ciclo-05-pricing`. Task 1 (contratos e cálculo exato) foi commitada em `480a65f`. Task 2 (custo exato por componente da ficha) está implementada, revisada independentemente e validada por unidade; integração com banco não executada. Tasks 3–6 não iniciadas porque o helper de integração aponta para DEV hospedado e não há alvo local descartável nem autorização específica para DEV no Ciclo 05.
+- **Estado:** decisões e plano aprovados na branch `codex/ciclo-05-pricing`. Task 1 (contratos e cálculo exato) foi commitada em `480a65f`. Task 2 (custo exato por componente da ficha) foi commitada em `c4872f1`, revisada independentemente e validada por unidade; integração com banco não executada. Tasks 3–6 não iniciadas porque o helper de integração aponta para DEV hospedado e não há alvo local descartável nem autorização específica para DEV no Ciclo 05.
 - **Prompt:** `prompts/05-PRECIFICACAO.md`; critérios T-15 a T-18 e decisões pendentes IMP-016/IMP-017.
 - **Spec:** `docs/superpowers/specs/2026-10-16-pricing-design.md`; aprovada pelo fundador em 2026-10-16.
 - **Plano TDD:** `docs/superpowers/plans/2026-10-16-pricing.md`; aprovado pelo fundador em 2026-10-16.

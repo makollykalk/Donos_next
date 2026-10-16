@@ -10,8 +10,8 @@ export function RecipeEditor({client,recipe,recipes,ingredients,onSaved,onCancel
  const [name,setName]=useState(recipe?.currentVersion?.name??recipe?.name??'');
  const [kind,setKind]=useState<RecipeKind>(recipe?.kind??'product');
  const [outputUnit,setOutputUnit]=useState<RecipeOutputUnit>(recipe?.currentVersion?.outputUnit??'kg');
- const [components,setComponents]=useState<RecipeComponentInput[]>(recipe?.currentVersion?.components??[]);
- const [transformations,setTransformations]=useState<RecipeTransformationInput[]>(recipe?.currentVersion?.transformations??[]);
+ const [components,setComponents]=useState<RecipeComponentInput[]>(()=>recipe?.currentVersion?.components.map(component=>({...component,id:crypto.randomUUID()}))??[]);
+ const [transformations,setTransformations]=useState<RecipeTransformationInput[]>(()=>recipe?.currentVersion?.transformations.map(step=>({...step,id:crypto.randomUUID()}))??[]);
  const command=useRecipeCommand(client);
  const patch=(id:string,value:RecipeComponentInput)=>{command.changed();setComponents(rows=>rows.map(row=>row.id===id?value:row));};
  const save=async()=>{

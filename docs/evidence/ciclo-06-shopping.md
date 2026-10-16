@@ -28,4 +28,4 @@ Atualizado em 2026-10-16. Branch `codex/ciclo-06-shopping`, worktree gerenciado 
 - Testes de integração selecionados, não a suíte integral de integração.
 - E2E é mockado e não comprova fluxo browser contra APIs reais. A UI não consegue detectar cancelamento Premium antes da primeira resposta 403, porque não há sinal de entitlement em endpoint de leitura.
 - Revisão apontou que os testes verificam metadados/FKs das tabelas-filhas mas não tentam acesso cruzado individual a listas/itens/compromissos ou exportação por ID forjado; as policies e filtros de tenant foram revisados, essa lacuna de teste permanece.
-- Não houve deploy nem merge. Próxima etapa: fechar releitura independente, commitar em partes pequenas e abrir PR para revisão humana.
+- PR #6 está aberto para revisão humana contra `codex/ciclo-04-stock-locations-audit`; branch publicada com commits pequenos. Não fazer merge nem deploy sem revisão humana.

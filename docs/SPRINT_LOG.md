@@ -1,7 +1,7 @@
 ## Ciclo 06 — listas de compras Premium
 
 - **Período:** 2026-10-16.
-- **Estado:** implementação e gates executados; em segunda revisão independente e preparação de PR para revisão humana. Sem merge/deploy.
+- **Estado:** implementação e gates executados; PR #6 aberto para revisão humana, sem merge/deploy.
 - **Decisão:** somente compromissos confirmados explicitamente pelo dono contam na reposição; rascunhos e recebimentos não contam. Recebimento parcial vinculado consome pendência e registra estoque/ledger/histórico atomicamente.
 - **Alvo:** migration aditiva e testes autorizados apenas em Supabase DONOS Next DEV `kfthwjrvgslnsjigqnyc`.
 - **Migrations DEV:** `20261016162828_cycle06_shopping`, `20261016164932_cycle06_shopping_item_guard_fix`, `20261016165528_cycle06_shopping_supplier_guard`.

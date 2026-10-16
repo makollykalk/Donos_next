@@ -97,7 +97,7 @@
 - [x] **Passo 4: implementar migration aditiva e repositório.** RLS `ENABLE` + `FORCE`, grants mínimos, versionamento otimista, FKs tenant/unidade/local/reserva/resultado; sem `SECURITY DEFINER`. Cron diário usa `pg_cron` 1.6.4; purge não toca ledger/auditoria/estoque. `reconciliation_required` é exceção não expirada até resolução e exige revisão operacional se persistir.
 - [x] **Passo 5: aplicar somente migrations aditivas do Ciclo 07A no DEV autorizado.** Aplicadas `20261016190345_cycle07_ai_text_proposals` e `20261016190427_cycle07_ai_proposal_reservation_fk_index`; histórico confirmado antes/depois, sem reset ou outras migrations. Testes sintéticos terminaram sem propostas persistidas.
 - [x] **Passo 6: executar gate RLS/schema.** Integrações schema e tenant passaram; advisor confirmou que não resta FK sem índice nesta tabela.
-- [x] **Passo 7: commit.** `feat(db): persist tenant-scoped ai text proposals` (commit a registrar).
+- [x] **Passo 7: commit.** `feat(db): persist tenant-scoped ai text proposals` (`4fc3a31`).
 
 **Checkpoint:** não avançar sem RLS/constraints passando e retenção aprovada. O replay integral desde DB local vazio permanece pendente por falta de runtime local; documentar essa limitação, sem resetar ou substituir a prova com o DEV. A autorização C07-DEV cobre somente a migration aditiva e testes sintéticos desta tarefa.
 

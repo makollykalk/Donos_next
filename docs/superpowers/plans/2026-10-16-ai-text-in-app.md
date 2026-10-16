@@ -55,7 +55,7 @@
 - Criar `packages/contracts/src/ai-schemas.ts`, `packages/contracts/src/ai.ts`.
 - Modificar `packages/contracts/src/index.ts`.
 - Criar `packages/domain-ai/package.json`, `packages/domain-ai/tsconfig.json`, `packages/domain-ai/src/index.ts`, `packages/domain-ai/src/text-extractor.ts`, `packages/domain-ai/src/proposal-validation.ts`.
-- Modificar `tsconfig.json`, `vitest.config.ts`, `vitest.integration.config.ts` e `apps/api/tsconfig.json` somente para registrar `@donos/domain-ai`.
+- Modificar `tsconfig.json`, `tsconfig.tests.json`, `vitest.config.ts` e `apps/api/tsconfig.json` somente para registrar `@donos/domain-ai`; `vitest.integration.config.ts` herda o alias da config unitária.
 - Criar `tests/unit/ai-text-contracts.test.ts`, `tests/unit/ai-text-extractor.test.ts`, `tests/unit/ai-proposal-validation.test.ts`.
 
 **Interfaces produzidas:**

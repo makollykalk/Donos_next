@@ -8,6 +8,7 @@
     { "path": "packages/domain-inventory" },
     { "path": "packages/domain-recipes" },
     { "path": "packages/domain-purchases" },
+    { "path": "packages/domain-ai" },
     { "path": "packages/auth-client" },
     { "path": "apps/portal" },
     { "path": "apps/estoque" },

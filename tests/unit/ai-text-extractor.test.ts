@@ -11,6 +11,10 @@ describe('extractInventoryText', () => {
     expect(extractInventoryText('Comprei 2,5 kg de tomate por R$ 12,50')).toMatchObject({ quantity: '2.5', totalPrice: '12.5' });
   });
 
+  it('preserves quantities with three decimal places', () => {
+    expect(extractInventoryText('Comprei 0.125 kg de arroz por R$ 40')).toMatchObject({ quantity: '0.125', ambiguous: false });
+  });
+
   it('parses grouped Brazilian currency without changing its magnitude', () => {
     expect(extractInventoryText('Comprei 5 kg de arroz por R$ 1.200,00')).toMatchObject({ totalPrice: '1200', ambiguous: false });
   });

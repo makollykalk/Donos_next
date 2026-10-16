@@ -4,15 +4,23 @@ const numberPattern = '(\\d+(?:[.,]\\d+)?)';
 const quantityPattern = new RegExp(`\\b${numberPattern}\\s*(kg|quilogramas?|g|gramas?|l|litros?|ml|mililitros?|unidades?|un)\\b`, 'iu');
 const localizedMoneyPattern = '(\\d{1,3}(?:\\.\\d{3})+(?:,\\d+)?|\\d+(?:[.,]\\d+)?)';
 
-function decimal(value: string): string | null {
-  const normalized = value.includes(',')
-    ? value.replace(/\./gu, '').replace(',', '.')
-    : /^\d{1,3}(?:\.\d{3})+$/u.test(value) ? value.replace(/\./gu, '') : value;
-  const withoutLeadingZeroes = normalized.replace(/^0+(?=\d)/u, '');
+function normalizedDecimal(value: string): string | null {
+  const withoutLeadingZeroes = value.replace(/^0+(?=\d)/u, '');
   if (!/^\d+(?:\.\d+)?$/u.test(withoutLeadingZeroes)) return null;
   const [whole, fraction = ''] = withoutLeadingZeroes.split('.');
   const result = `${whole}${fraction ? `.${fraction.replace(/0+$/u, '')}` : ''}`;
   return result.endsWith('.') ? result.slice(0, -1) : result;
+}
+
+function quantityDecimal(value: string): string | null {
+  return normalizedDecimal(value.replace(',', '.'));
+}
+
+function currencyDecimal(value: string): string | null {
+  const normalized = value.includes(',')
+    ? value.replace(/\./gu, '').replace(',', '.')
+    : /^[1-9]\d{0,2}(?:\.\d{3})+$/u.test(value) ? value.replace(/\./gu, '') : value;
+  return normalizedDecimal(normalized);
 }
 
 function unsupported(explanation: string): AiTextCandidate {
@@ -41,7 +49,7 @@ export function extractInventoryText(text: string): AiTextCandidate {
     : unitToken === 'l' || /^litro/iu.test(unitToken ?? '') ? 'L'
     : unitToken === 'ml' || /^mililitro/iu.test(unitToken ?? '') ? 'mL'
     : unitToken ? 'un' : null;
-  const qty = qmatch?.[1] ? decimal(qmatch[1]) : null;
+  const qty = qmatch?.[1] ? quantityDecimal(qmatch[1]) : null;
   const tail = qmatch ? text.slice((qmatch.index ?? 0) + qmatch[0].length) : '';
   const ingredientMatch = tail.match(/^\s*(?:de|do|da|dos|das)?\s*([^,;.!?\n]+?)(?=\s+(?:por|a|no valor de|custando|porque|para|com motivo)\b|[,;.!?\n]|$)/iu);
   const ingredientDescription = ingredientMatch?.[1]?.trim().replace(/\s+/gu, ' ').slice(0, 120) || null;
@@ -49,7 +57,7 @@ export function extractInventoryText(text: string): AiTextCandidate {
   const explicitUnitPrice = money
     ? new RegExp(`^\\s*(?:/\\s*(?:kg|g|l|ml|un)\\b|por\\s+(?:kg|g|l|ml|un)\\b)`, 'iu').test(tail.slice((money.index ?? 0) + money[0].length))
     : false;
-  const totalPrice = money?.[1] && !explicitUnitPrice ? decimal(money[1]) : null;
+  const totalPrice = money?.[1] && !explicitUnitPrice ? currencyDecimal(money[1]) : null;
   const reasonMatch = action === 'issue' ? text.match(/\b(?:motivo|porque|por causa de)\s+([^.!?\n,;]+)/iu) : null;
   const reason = reasonMatch?.[1]?.trim().slice(0, 240) || null;
   const extraConjunction = qmatch ? /\be\b/iu.test(tail) : false;

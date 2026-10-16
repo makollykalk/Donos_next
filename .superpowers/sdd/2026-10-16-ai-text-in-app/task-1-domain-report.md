@@ -67,3 +67,17 @@ GREEN evidence:
 - `pnpm test:unit` — **23 files passed, 172 tests passed**; Node engine warning remains (`v24.19.0`, requested `>=24.22.0 <25`).
 
 Self-review: grouped prices and unit-price suffixes are conservative and deterministic. Conjunction detection intentionally prefers review over a possibly incomplete proposal, including compound item clauses. Derived price now respects the frozen price schema bound; no schema or shared configuration changed. Only the two domain source files, two named test files, and this report were changed for this fix cycle.
+
+## Independent re-review round 1 — RED → GREEN
+
+Added regression test first for `Comprei 0.125 kg de arroz por R$ 40`. RED command: `pnpm exec vitest run tests/unit/ai-text-extractor.test.ts` — **1 failed, 10 passed**; extracted quantity was incorrectly `125`.
+
+Separated quantity decimal normalization from Brazilian currency grouping. Quantities now only normalize comma decimal separators and preserve dot decimals such as `0.125`; money normalization separately applies localized grouping rules, preserving `R$ 1.200,00` as `1200` and decimal comma values as before.
+
+GREEN evidence:
+
+- `pnpm exec vitest run tests/unit/ai-text-extractor.test.ts` — **1 file passed, 11 tests passed**.
+- `pnpm exec tsc -b packages/domain-ai --pretty false` — **passed**.
+- `pnpm test:unit` — **23 files passed, 173 tests passed**; existing Node engine warning remains (`v24.19.0`, requested `>=24.22.0 <25`).
+
+Self-review: grouping behavior is now isolated to currency parsing, avoiding reinterpretation of quantity precision. The parser regression suite still covers comma decimals and grouped currency after the split.

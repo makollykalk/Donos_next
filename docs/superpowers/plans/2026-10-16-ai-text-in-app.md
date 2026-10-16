@@ -55,15 +55,15 @@
 - Criar `packages/contracts/src/ai-schemas.ts`, `packages/contracts/src/ai.ts`.
 - Modificar `packages/contracts/src/index.ts`.
 - Criar `packages/domain-ai/package.json`, `packages/domain-ai/tsconfig.json`, `packages/domain-ai/src/index.ts`, `packages/domain-ai/src/text-extractor.ts`, `packages/domain-ai/src/proposal-validation.ts`.
-- Modificar `tsconfig.json`, `vitest.config.ts` e referências de build de `apps/api/tsconfig.json` somente para registrar `@donos/domain-ai`.
-- Criar `tests/unit/ai-text-extractor.test.ts`, `tests/unit/ai-proposal-validation.test.ts`.
+- Modificar `tsconfig.json`, `vitest.config.ts`, `vitest.integration.config.ts` e `apps/api/tsconfig.json` somente para registrar `@donos/domain-ai`.
+- Criar `tests/unit/ai-text-contracts.test.ts`, `tests/unit/ai-text-extractor.test.ts`, `tests/unit/ai-proposal-validation.test.ts`.
 
 **Interfaces produzidas:**
 
-- `AiProposalAction = 'receipt' | 'issue'`; status `interpreting | needs_review | ready | confirmed | discarded | reconciliation_required`.
-- DTO `AiTextProposal` contém `id`, contexto tenant/unidade/local, ação, candidato estruturado, campos faltantes, versão/status, timestamps e vínculo de resultado; não inclui `sourceText` persistido.
-- `extractInventoryText(text: string): ExtractedInventoryCandidate` é síncrona/determinística e não acessa rede, SQL, tenant ou autorização.
-- `validateInventoryCandidate(candidate, catalog): ValidatedInventoryProposal` resolve somente catálogo ativo fornecido pelo servidor; calcula preço unitário em strings decimais; não seleciona fornecedor implicitamente.
+- `AiTextAction = 'receipt' | 'issue'`; status `interpreting | needs_review | ready | confirmed | discarded | reconciliation_required`.
+- `AiTextProposal` contém `id`, `organizationId`, `restaurantId`, `locationId`, `action`, `candidate`, `missingFields`, `status`, `version`, `createdAt`, `updatedAt`, `expiresAt` e `resultId`; não inclui `sourceText` persistido. Candidatos incluem ação, descrição, quantidade/unidade/valores decimais como strings anuláveis, motivo, indicador de ambiguidade e explicações; schema estrito rejeita chaves extras.
+- `extractInventoryText(text: string): AiTextCandidate` é síncrona/determinística; recebe no máximo 2.000 caracteres, retorna somente o DTO de candidato estrito e não acessa rede, SQL, tenant ou autorização.
+- `validateInventoryCandidate(candidate: AiTextCandidate, catalog: readonly InventoryCatalogEntry[], selection: { supplierId?: string; locationId?: string }): ValidatedInventoryProposal` resolve apenas correspondência exata única em catálogo ativo. `InventoryCatalogEntry = { id: string; name: string; baseUnit: 'kg' | 'L' | 'un'; active: boolean }`; resultado contém `ingredientId: string | null`, `unitPrice: string | null`, `missingFields: AiTextMissingField[]` e `status: 'needs_review' | 'ready'`. Preço total é dividido pela quantidade usando inteiros/BigInt e arredondamento half-even para 12 casas decimais; nenhum fornecedor é inferido.
 
 **Interfaces consumidas:** schemas existentes de inventário/unidades e representações de quantidade/preço em `packages/contracts/src/inventory-schemas.ts`.
 
@@ -107,7 +107,7 @@
 **Arquivos:**
 
 - Criar `apps/api/src/services/ai-text-types.ts`, `apps/api/src/services/ai-text.ts`, `apps/api/src/routes/ai-text.ts`.
-- Modificar `apps/api/src/app.ts`, `apps/api/src/http/security.ts`, `apps/api/package.json`, `apps/api/tsconfig.json`.
+- Modificar `apps/api/src/app.ts`, `apps/api/src/http/security.ts`, `apps/api/package.json`.
 - Criar `tests/integration/ai-text-api.test.ts`.
 
 **Interfaces produzidas:**

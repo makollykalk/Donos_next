@@ -1,12 +1,12 @@
 # Ciclo 06 — Listas de compras Premium do App 01
 
-**Status:** aprovada pelo fundador em 2026-10-16; implementação local do Ciclo 06 autorizada, sujeita aos gates do plano. Alvo remoto continua não autorizado até decisão específica.
+**Status:** aprovada pelo fundador em 2026-10-16; implementação e testes autorizados no Supabase DONOS Next DEV `kfthwjrvgslnsjigqnyc`, apenas para testes e migration aditiva.
 
 **Base:** DONOS Next V3 (DEC-001, DEC-002, DEC-008, DEC-010 a DEC-013), T-02, T-07, T-09, T-19, T-23 e T-24, `prompts/06-PREMIUM-COMPRAS.md`.
 
 **Dependência funcional:** Ciclo 02 (estoque, unidades, conversões, recebimentos e histórico de preços). A branch de implementação deverá partir de uma base que já contenha o Ciclo 04 merged; o Ciclo 05 não é dependência deste ciclo.
 
-**Limites operacionais:** apenas desenvolvimento local e dados sintéticos até haver aprovação específica para qualquer alvo remoto. Sem reset, produção, legado, deploy, cobrança real, integração paga ou WhatsApp.
+**Limites operacionais:** desenvolvimento local e testes/migration aditiva exclusivamente no Supabase DONOS Next DEV autorizado. Sem reset, produção, legado, deploy, cobrança real, integração paga ou WhatsApp.
 
 ## Intenção
 
@@ -100,7 +100,5 @@ O resultado deve responder, por unidade e local: quais insumos atingiram o míni
 
 ## Decisões registradas e gate
 
-- Regra de compromisso pendente (só confirmação explícita do dono; rascunhos e recebidos não contam) foi escolhida pelo fundador em 2026-10-16 nesta conversa. A implementação precisa ser registrada como decisão/ADR aprovada antes do código.
-- Ainda dependem de revisão nesta spec: escopo do recebimento parcial vinculado, semântica de histórico após cancelamento, formatos CSV/impressão, regra de fornecedor mais recente, e lista dos endpoints/contratos.
-- Nenhuma autorização para Supabase remoto foi dada para o Ciclo 06. Testes iniciais devem usar mocks/banco local descartável já suportado; se isso não for possível, parar e solicitar autorização específica antes de acessar DEV.
-- A spec e o plano abaixo aguardam revisão humana. Não iniciar implementação, migrations nem chamadas remotas até aprovação do plano e gate de ambiente.
+- Regra de compromisso pendente, recebimento parcial, histórico após cancelamento, CSV/impressão, fornecedor recente e contratos foram aprovados pelo fundador em 2026-10-16 e registrados nesta spec, no plano e em `docs/adr/0005-shopping-commitments.md`.
+- O fundador autorizou migration aditiva e testes somente no Supabase DONOS Next DEV `kfthwjrvgslnsjigqnyc`. Produção, legado, deploy e cobrança seguem proibidos.

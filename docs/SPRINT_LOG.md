@@ -12,10 +12,12 @@
 ## Ciclo 07A — proposta por texto no App 01
 
 - **Período:** 2026-10-16.
-- **Estado:** spec, plano TDD e retenção de 30 dias aprovados pelo usuário. Tarefa 1 concluída e revisada; Tarefa 2 bloqueada antes de migration porque não há DB/Auth local descartável.
+- **Estado:** Tarefas 1 e 2 concluídas e revisadas; próxima é a Tarefa 3 (gate de entitlement/uso, serviço e rotas).
 - **Decisões aprovadas:** uma ação e um insumo por proposta; medidor/entitlement `ai_text_whatsapp` no protótipo sem WhatsApp; extrator determinístico apenas em desenvolvimento/testes; confirmação explícita e movimento transacional.
 - **Implementação Tarefa 1:** contratos e domínio puro, commits `72625a6` a `9dc0f20`; revisão round 2 sem achados Important/Critical. `pnpm test:unit` 173/173, `pnpm typecheck` e `git diff --check` passaram. Frontend ainda não iniciado; aplicar Apple Design skill na Tarefa 5.
-- **Pendências:** provisionar DB/Auth local descartável `donos_next_cycle07_test` ou autorizar explicitamente um alvo DEV exato; runtime Node 24.19.0 abaixo do requisito; sem autorização C07 para Supabase remoto. Não iniciar Tarefa 2 antes do gate local.
+- **Migrations Tarefa 2:** `20261016190345_cycle07_ai_text_proposals` e `20261016190427_cycle07_ai_proposal_reservation_fk_index`, aplicadas somente ao Supabase DONOS Next DEV `kfthwjrvgslnsjigqnyc`, alvo autorizado para migrations aditivas C07 e testes sintéticos. Proibidos reset, produção, legado, deploy e integrações pagas.
+- **Verificação Tarefa 2:** `pnpm test:unit` 24 arquivos/178 testes; integrações `ai-proposal-schema` e `ai-text-tenant-security` 2/2; guarda de alvo 5/5; `pnpm typecheck`, TypeScript dos testes e `git diff --check` passaram. Revisão independente sem bloqueadores; advisor sem FK C07 sem índice. Evidência em [Ciclo 07A Tarefa 2](evidence/ciclo-07a-task-2.md).
+- **Limitações:** Node 24.19.0 abaixo do requisito; replay desde DB local vazio indisponível; testes não fazem referência comportamental entre resultados de locais diferentes, embora as FKs compostas e metadata sejam verificadas; `reconciliation_required` pode reter dados estruturados indefinidamente se o dono não resolver e exige acompanhamento operacional. Tarefa 3+ não iniciadas.
 - **Spec:** `docs/superpowers/specs/2026-10-16-ai-text-in-app-design.md`; **plano TDD:** `docs/superpowers/plans/2026-10-16-ai-text-in-app.md`; **ADR:** `docs/adr/0006-ai-text-in-app.md`.
 
 ## Ciclo 04 — locais de estoque e auditoria física

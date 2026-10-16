@@ -13,3 +13,4 @@ export * as purchaseRepository from './purchase-repository.js';
 export * as inventoryRead from './inventory-read-repository.js';
 export * as recipeRepository from './recipe-repository.js';
 export * as shoppingRepository from './shopping-repository.js';
+export * from './ai-proposal-repository.js';

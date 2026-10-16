@@ -1,7 +1,7 @@
 # Ciclo 07A — Proposta de estoque por texto dentro do App 01
 
 **Data:** 2026-10-16
-**Status:** spec aprovada pelo fundador em 2026-10-16; plano TDD submetido para revisão humana. Nenhum código iniciado.
+**Status:** spec e retenção aprovadas pelo fundador em 2026-10-16; Tarefa 1 concluída e revisada; Tarefa 2 autorizada no alvo C07-DEV em 2026-10-16.
 **Aprovação de design em conversa:** fluxo responsivo com texto, interpretação, revisão e confirmação explícita.
 **Base:** DONOS Next V3 (DEC-003, DEC-010, DEC-011, DEC-012 e DEC-013), critérios T-05/T-20/T-21/T-22, `prompts/07-IA.md` e PR #6 merged no commit `d8a9f51`.
 
@@ -72,7 +72,7 @@ Se organização, unidade ou local mudar enquanto a interpretação ou revisão 
 - **Contratos:** schema estrito e DTO para criar/ler/editar/descartar/confirmar proposta; strings decimais e estado explícito. A porta de extração recebe apenas texto sanitizado e limite de saída e retorna candidatos estruturados.
 - **Domínio IA:** validador puro e extrator determinístico; sem conexão SQL, credenciais privilegiadas, acesso direto a tabelas ou chamadas externas.
 - **API/serviço:** autenticação e contexto verificados conforme o inventário; entitlement e franquia via billing; operações de proposta/uso curtas e confirmação transacional.
-- **Persistência:** tabela proposta tenant/unit scoped, RLS ENABLE+FORCE, FKs compostas e políticas de titularidade; auditoria registra ator, ação, confirmação e movimento resultante. Guardar versão/estado e hash do conteúdo para idempotência. Nenhum raw text vai para logs.
+- **Persistência:** tabela proposta tenant/unit scoped, RLS ENABLE+FORCE, FKs compostas e políticas de titularidade; auditoria registra ator, ação, confirmação e movimento resultante. Guardar versão/estado e hash de requisição para idempotência, sem hash simples do texto de origem. Nenhum raw text vai para logs.
 - **Integração de estoque:** reutilizar `draftReceipt(ctx,input,tx)`/`receiveReceipt(ctx,id,key,tx)` e a operação de baixa de domínio dentro da transação da proposta. Validar fornecedor, insumo, unidade e local novamente no commit.
 - **UI:** `apps/estoque/src/ai/**` e integração contida em `InventoryWorkspace.tsx`; cliente vincula geração e confirmação a uma geração do contexto e descarta respostas antigas.
 - **Visual:** nenhum novo pacote obrigatório previsto. Usar HTML semântico, estilos locais, tipografia do sistema, foco visível, contraste e alvos apropriados para toque. Movimento segue a preferência de redução de movimento do sistema.
@@ -90,8 +90,9 @@ Se organização, unidade ou local mudar enquanto a interpretação ou revisão 
 - `organization_id` é fronteira primária; `restaurant_id` e local devem pertencer ao tenant ativo. API valida titularidade e RLS protege propostas e filhos. Testar ID forjado e acesso cruzado entre duas organizações.
 - O texto do usuário é dado não confiável, inclusive para prompt injection. O extrator não pode emitir comandos; parser/validador determinístico limita campos, formato e tamanho. O mock inclui instrução adversarial para provar que conteúdo não altera política.
 - Sem `service_role` no cliente, segredos no repositório/browser, acesso SQL do modelo ou envio remoto de texto, foto, áudio, WhatsApp ou Storage. Produção não serve o mock como extração real.
+- Para a Tarefa 2, o fundador autorizou migrations aditivas e testes com dados sintéticos exclusivamente no Supabase DONOS Next DEV `kfthwjrvgslnsjigqnyc` (C07-DEV). Não executar reset, aplicar migrations além do Ciclo 07A, alterar produção/legado, fazer deploy ou ativar integração paga.
 - Quantidades e dinheiro críticos usam decimal, razão exata ou unidade-base; nenhum `number` binário em cálculo monetário/quantitativo.
-- Propostas e respostas originais não entram em logs. A retenção mínima necessária para auditoria, cancelamento e exclusão ainda depende da decisão de retenção de dados; o plano deverá propor prazo e campos mínimos sem inventar obrigação comercial ou legal.
+- Propostas e respostas originais não entram em logs. O fundador aprovou retenção estruturada por 30 dias após estado terminal; propostas abertas expiram 30 dias após criação. `reconciliation_required` é exceção operacional: permanece acessível e não é apagada automaticamente até confirmação ou descarte pelo dono; após a resolução começa a retenção terminal de 30 dias. Se nunca for resolvida, seus dados estruturados podem permanecer indefinidamente, exigindo acompanhamento operacional e revisão periódica do estado. O texto bruto e hash simples dele não são persistidos. Um hash de requisição é usado para idempotência. Limpeza diária afeta apenas propostas expiradas fora dessa exceção; ledger e auditoria mantêm suas próprias retenções.
 
 ## Critérios de aceite
 
@@ -104,12 +105,12 @@ Se organização, unidade ou local mudar enquanto a interpretação ou revisão 
 - UI anuncia interpretação/erro/resultado, mantém formulário manual acessível e respeita teclado, foco, leitor de tela e `prefers-reduced-motion`.
 - Nenhum teste é declarado aprovado sem execução observada; nenhum acesso remoto, migration, custo pago ou deploy ocorre neste subciclo sem gate explícito.
 
-## Decisões a validar nesta revisão
+## Decisões aprovadas nesta revisão
 
 Decisões aprovadas pelo fundador nesta conversa:
 
 1. Reutilizar o entitlement/medidor `ai_text_whatsapp` no protótipo de texto dentro do app; isso não autoriza nem implementa WhatsApp.
 2. Limitar cada proposta inicial a uma ação e um insumo; frases com múltiplos itens pedem divisão/correção manual.
-3. O plano TDD deve propor campos e prazo mínimo de retenção das propostas. Esse prazo ainda requer aprovação explícita antes de migration/código.
+3. Proposta estruturada retida por 30 dias após confirmação/descarte; propostas abertas expiram após 30 dias; `reconciliation_required` é exceção operacional até resolução e pode persistir indefinidamente caso não haja ação do dono, exigindo acompanhamento operacional e revisão periódica.
 
-As duas primeiras decisões estão registradas em ADR-0006. A política proposta de retenção está no plano e aguarda aprovação explícita antes de migration/código. Esta spec não autoriza implementação, provedor real, integração paga, WhatsApp, DEV remoto, migration ou deploy.
+As decisões 1 e 2 estão registradas em ADR-0006. A política de retenção foi aprovada antes da Tarefa 1. C07-DEV autoriza somente o uso do alvo de desenvolvimento descrito acima para a Tarefa 2; as demais limitações desta spec permanecem.

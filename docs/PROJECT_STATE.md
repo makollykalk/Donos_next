@@ -12,10 +12,11 @@ Atualizado em 2026-10-16.
 
 ## Próximo subciclo
 
-- **Ciclo 07A — proposta de estoque por texto no App 01:** design e spec aprovados pelo fundador; plano TDD concluído e aguardando revisão humana nesta branch `codex/ciclo-07-ai-text`.
+- **Ciclo 07A — proposta de estoque por texto no App 01:** spec, plano TDD e retenção de 30 dias aprovados pelo usuário. Tarefa 1 (contratos e domínio puro) concluída e revisada nesta branch `codex/ciclo-07-ai-text`; Tarefa 2 bloqueada pela falta de DB/Auth local descartável.
 - Escopo da spec: uma ação/um insumo por proposta, mock determinístico apenas em desenvolvimento/testes, confirmação explícita e medidor existente `ai_text_whatsapp`; não autoriza integração real, WhatsApp ou uso remoto.
-- A spec está em [2026-10-16-ai-text-in-app-design.md](superpowers/specs/2026-10-16-ai-text-in-app-design.md), o plano em [2026-10-16-ai-text-in-app.md](superpowers/plans/2026-10-16-ai-text-in-app.md) e ADR [0006](adr/0006-ai-text-in-app.md). Nenhum código foi iniciado. O plano propõe apagar propostas/dados estruturados após 30 dias; essa política aguarda aprovação.
-- Não há autorização de DEV remoto para Ciclo 07. O plano deverá exigir alvo descartável local e pausar se indisponível; qualquer uso de DEV exige autorização explícita nova.
+- A spec está em [2026-10-16-ai-text-in-app-design.md](superpowers/specs/2026-10-16-ai-text-in-app-design.md), o plano em [2026-10-16-ai-text-in-app.md](superpowers/plans/2026-10-16-ai-text-in-app.md) e ADR [0006](adr/0006-ai-text-in-app.md). A Tarefa 1 está nos commits `72625a6` a `9dc0f20`; as regressões levantadas foram corrigidas e re-revisadas. Unitários 173/173, typecheck e diff check passaram. Nenhuma integração/API/UI foi iniciada.
+- Política aprovada: dados estruturados de proposta removidos 30 dias após estado terminal; propostas abertas expiram em 30 dias da criação. Aplicar Apple Design skill ao iniciar frontend (Tarefa 5).
+- Não há autorização de DEV remoto para Ciclo 07. Tarefa 2 permanece parada até provisionar DB/Auth local descartável ou receber autorização explícita para um alvo DEV exato.
 
 ## Estado Git e próximo passo
 

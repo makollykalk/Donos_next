@@ -12,9 +12,10 @@
 ## Ciclo 07A — proposta por texto no App 01
 
 - **Período:** 2026-10-16.
-- **Estado:** design/spec aprovada pelo fundador; plano TDD concluído e aguardando revisão humana; implementação não iniciada.
+- **Estado:** spec, plano TDD e retenção de 30 dias aprovados pelo usuário. Tarefa 1 concluída e revisada; Tarefa 2 bloqueada antes de migration porque não há DB/Auth local descartável.
 - **Decisões aprovadas:** uma ação e um insumo por proposta; medidor/entitlement `ai_text_whatsapp` no protótipo sem WhatsApp; extrator determinístico apenas em desenvolvimento/testes; confirmação explícita e movimento transacional.
-- **Pendências:** revisar/aprovar plano e política proposta (apagar proposta estruturada 30 dias após estado terminal; abertas expiram 30 dias após criação); comprovar DB local descartável antes de testes de integração; não há autorização C07 para Supabase remoto.
+- **Implementação Tarefa 1:** contratos e domínio puro, commits `72625a6` a `9dc0f20`; revisão round 2 sem achados Important/Critical. `pnpm test:unit` 173/173, `pnpm typecheck` e `git diff --check` passaram. Frontend ainda não iniciado; aplicar Apple Design skill na Tarefa 5.
+- **Pendências:** provisionar DB/Auth local descartável `donos_next_cycle07_test` ou autorizar explicitamente um alvo DEV exato; runtime Node 24.19.0 abaixo do requisito; sem autorização C07 para Supabase remoto. Não iniciar Tarefa 2 antes do gate local.
 - **Spec:** `docs/superpowers/specs/2026-10-16-ai-text-in-app-design.md`; **plano TDD:** `docs/superpowers/plans/2026-10-16-ai-text-in-app.md`; **ADR:** `docs/adr/0006-ai-text-in-app.md`.
 
 ## Ciclo 04 — locais de estoque e auditoria física

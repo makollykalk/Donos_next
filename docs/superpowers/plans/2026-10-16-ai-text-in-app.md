@@ -10,7 +10,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-16-ai-text-in-app-design.md`
 
-**Status:** plano submetido para revisão humana; nenhuma implementação iniciada.
+**Status:** plano e política de retenção aprovados pelo usuário em 2026-10-16. Tarefa 1 concluída e revisada; Tarefa 0 confirmou baseline, mas o gate de DB/Auth local descartável segue bloqueado. Não iniciar Tarefa 2 sem resolver esse gate.
 
 ## Global Constraints
 
@@ -43,10 +43,10 @@
 
 **Interfaces:** nenhuma.
 
-- [ ] **Passo 1: verificar branch, estado limpo e runtime.** Conferir que o trabalho parte de `codex/ciclo-07-ai-text` sobre `d8a9f51`; `node --version` precisa atender `>=24.22.0 <25`.
-- [ ] **Passo 2: executar baseline unitário.** Rodar `pnpm test:unit`; esperado: todos os testes unitários da base passam.
-- [ ] **Passo 3: comprovar destino local.** Verificar Docker/Supabase local ou Postgres local; confirmar que o alvo usa loopback e database exclusivo descartável `donos_next_cycle07_test`. Não ler/imprimir valores de `.local/dev.json`.
-- [ ] **Checkpoint:** se não existir DB/Auth local que permita aplicar migrations e testar RLS, interromper antes da Tarefa 2. Pedir autorização explícita para um alvo DEV exato ou instrução de provisionamento local. Não usar o projeto C06 como fallback.
+- [x] **Passo 1: verificar branch, estado limpo e runtime.** Branch `codex/ciclo-07-ai-text` sobre `d8a9f51`; runtime pnpm Node 24.19.0 abaixo de `>=24.22.0 <25`.
+- [x] **Passo 2: executar baseline unitário.** `pnpm test:unit` passou 150/150 após build/bootstrap do workspace.
+- [x] **Passo 3: comprovar destino local.** Docker, Podman, Postgres e Supabase CLI indisponíveis; loopback 5432/54321/54322 sem serviço.
+- [ ] **Checkpoint bloqueado:** não há DB/Auth descartável local. Parar antes da Tarefa 2; pedir provisionamento local ou autorização explícita para um alvo DEV exato. Não usar o projeto C06 como fallback.
 
 ### Tarefa 1 — Contratos e domínio puro (RED → GREEN)
 
@@ -67,9 +67,7 @@
 
 **Interfaces consumidas:** schemas existentes de inventário/unidades e representações de quantidade/preço em `packages/contracts/src/inventory-schemas.ts`.
 
-- [ ] **Passo 1: escrever testes RED do extrator.** Incluir compra de 5 kg por R$190 → preço unitário `38`; vírgula decimal; entrada sem quantidade/preço; baixa sem motivo; dois insumos/ações; instrução adversarial não altera o resultado esperado.
-- [ ] **Passo 2: executar RED.** `pnpm exec vitest run tests/unit/ai-text-extractor.test.ts`; esperado: falha porque os schemas/extrator ainda não existem.
-- [ ] **Passo 3: escrever testes RED do validador.** Provar correspondência única, ambígua/inexistente, unidade inválida, fornecedor ausente, strings decimais e estado `needs_review` até os campos obrigatórios serem corrigidos.
+- [x] **Tarefa 1 concluída:** contratos e domínio puros implementados em RED→GREEN, commit `9dc0f20`; revisão independente round 2 sem findings Important/Critical. Evidência atual: extrator 11/11, unitários 173/173, `pnpm typecheck` e `git diff --check` passaram. Node 24.19.0 ainda abaixo do requisito.
 - [ ] **Passo 4: executar RED.** `pnpm exec vitest run tests/unit/ai-proposal-validation.test.ts`; esperado: falha pelos exports ainda inexistentes.
 - [ ] **Passo 5: implementar schemas e funções.** Manter parser determinístico e separado da validação de catálogo; limitar texto a 2.000 caracteres e uma ação/um insumo.
 - [ ] **Passo 6: executar unitários focados e typecheck.** Rodar os dois arquivos Vitest e `pnpm typecheck`; esperado: todos passam sem mudar contratos de estoque existentes.
@@ -192,4 +190,4 @@
 - Após congelar Task 1 interfaces, subagente pode implementar somente `packages/domain-ai/src/**` e testes unitários desse domínio; outro pode implementar somente `apps/estoque/src/ai/**` e E2E mockado depois de receber os DTOs finais.
 - `InventoryWorkspace.tsx`, `app.ts`, migration, DB e transações não são compartilhados entre escritores; integração fica com o coordenador. Não paralelizar tasks que dependam do DB mutável.
 - Método recomendado: subagent-driven com checkpoints após cada tarefa. O erro em confirmação pode criar movimento ou duplicar custo; contratos e transação centralizados justificam a revisão frequente.
-- Gate humano obrigatório: este plano aguarda revisão/aprovação. Implementação não começa antes da aprovação do plano e da janela/rotina de retenção; Task 0 ainda precisa comprovar DB/Auth local. Nenhuma autorização remota do Ciclo 07 está registrada.
+- Gate humano satisfeito: plano e retenção aprovados em 2026-10-16; implementação de Tarefa 1 iniciada após aprovação. Tarefa 2 continua bloqueada pela falta de DB/Auth local descartável. Nenhuma autorização remota do Ciclo 07 está registrada. Aplicar Apple Design skill na Tarefa 5, quando o trabalho de frontend começar.

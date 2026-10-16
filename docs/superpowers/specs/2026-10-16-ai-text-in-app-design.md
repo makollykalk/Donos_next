@@ -1,8 +1,8 @@
 # Ciclo 07A — Proposta de estoque por texto dentro do App 01
 
-**Data:** 2026-10-16  
-**Status:** proposta para revisão humana; nenhum plano TDD ou código iniciado.  
-**Aprovação de design em conversa:** fluxo responsivo com texto, interpretação, revisão e confirmação explícita.  
+**Data:** 2026-10-16
+**Status:** proposta para revisão humana; nenhum plano TDD ou código iniciado.
+**Aprovação de design em conversa:** fluxo responsivo com texto, interpretação, revisão e confirmação explícita.
 **Base:** DONOS Next V3 (DEC-003, DEC-010, DEC-011, DEC-012 e DEC-013), critérios T-05/T-20/T-21/T-22, `prompts/07-IA.md` e PR #6 merged no commit `d8a9f51`.
 
 ## Intenção e resultado

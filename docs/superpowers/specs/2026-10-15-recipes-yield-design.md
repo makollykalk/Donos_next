@@ -37,7 +37,7 @@ type RecipeComponent =
       unit: InputUnit; conversion: ConversionSnapshot | null;
       role: 'ingredient' | 'packaging'; duplicateUseReason?: string }
   | { id: string; kind: 'recipe'; recipeVersionId: string; quantity: string;
-      unit: RecipeOutputUnit; role: 'ingredient' | 'packaging'; duplicateUseReason?: string };
+      unit: RecipeMeasureUnit; role: 'ingredient' | 'packaging'; duplicateUseReason?: string };
 type TransformationKind = 'cleaning' | 'cooking' | 'loss' | 'other';
 type RecipeVersionInput = {
   name: string; kind: RecipeKind; outputUnit: RecipeOutputUnit;

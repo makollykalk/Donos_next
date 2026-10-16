@@ -12,7 +12,7 @@
 
 ## Ciclo 05 — App 02 Precificação de Produtos e Combos
 
-- **Estado:** implementação commitada na branch `codex/ciclo-05-pricing`; gates finais e revisão independente concluídos em 2026-10-16. PR pendente; não houve merge, deploy ou início de novo ciclo.
+- **Estado:** implementação commitada na branch `codex/ciclo-05-pricing`; gates finais e revisão independente concluídos em 2026-10-16. PR draft #5 aberto contra `codex/ciclo-03-recipes-yield`; não houve merge, deploy ou início de novo ciclo.
 - **Prompt:** `prompts/05-PRECIFICACAO.md`; critérios T-15 a T-18 e decisões pendentes IMP-016/IMP-017.
 - **Spec:** `docs/superpowers/specs/2026-10-16-pricing-design.md`; aprovada pelo fundador em 2026-10-16.
 - **Plano TDD:** `docs/superpowers/plans/2026-10-16-pricing.md`; aprovado pelo fundador em 2026-10-16.

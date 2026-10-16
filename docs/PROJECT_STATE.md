@@ -4,7 +4,7 @@ Atualizado em 2026-10-16.
 
 ## Ciclo atual
 
-- **Ciclo 05 — App 02 Precificação de Produtos e Combos:** implementação de contratos, cálculo, persistência, API, UI, combos, snapshots históricos e integração de fichas concluída e commitada na branch `codex/ciclo-05-pricing`; gates finais e revisão independente executados em 2026-10-16. PR pendente; não houve merge, deploy ou início do Ciclo 06.
+- **Ciclo 05 — App 02 Precificação de Produtos e Combos:** implementação de contratos, cálculo, persistência, API, UI, combos, snapshots históricos e integração de fichas concluída e commitada na branch `codex/ciclo-05-pricing`; gates finais e revisão independente executados em 2026-10-16. PR draft #5 aberto; não houve merge, deploy ou início do Ciclo 06.
 - Ver [spec aprovada](superpowers/specs/2026-10-16-pricing-design.md), [plano TDD aprovado](superpowers/plans/2026-10-16-pricing.md) e [ADR 0004 aprovada](adr/0004-pricing-incidence-and-combos.md). IMP-016/017 e o vínculo atual da ficha foram aprovados em 2026-10-16. O fundador autorizou testes e migrations aditivas do Ciclo 05 somente no DEV `kfthwjrvgslnsjigqnyc`; sem reset, produção ou legado.
 - Escopo do prompt: produtos/variações/combos, custo manual ou custo de ficha autorizado, perfis de canal, simulações e snapshots históricos; T-15 a T-18.
 - Migrations aditivas `20261016144858_cycle05_pricing` e `20261016150625_cycle05_pricing_variant_snapshot.sql` aplicadas somente ao DEV autorizado `kfthwjrvgslnsjigqnyc`; o histórico remoto confirmou a migration de snapshot. Nenhum reset foi executado.

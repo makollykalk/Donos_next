@@ -2,7 +2,7 @@
 
 **Data:** 2026-10-16
 **Branch:** `codex/ciclo-05-pricing`
-**Estado:** implementação e gates concluídos; commits/PR pendentes. Sem merge ou deploy.
+**Estado:** implementação commitada; PR draft [#5](https://github.com/makollykalk/Donos_next/pull/5) aberto contra `codex/ciclo-03-recipes-yield`. Sem merge ou deploy.
 
 ## Decisões e escopo
 

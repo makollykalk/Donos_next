@@ -4,21 +4,21 @@ Atualizado em 2026-10-16.
 
 ## Ciclo atual
 
-- **Ciclo 04 — locais de estoque e auditoria física:** implementação concluída na branch `codex/ciclo-04-stock-locations-audit`; aguardando revisão humana antes de merge e antes de iniciar outro ciclo.
-- Escopo: locais físicos, partição de saldo/movimentos/custos, bloqueio durante contagem, contagem guiada cega, divergências compensatórias e relatório imprimível.
-- Especificação e plano aprovados; ver [spec](superpowers/specs/2026-10-15-stock-locations-audit-design.md), [plano TDD](superpowers/plans/2026-10-15-stock-locations-audit.md) e [evidências](evidence/ciclo-04-stock-locations-audit.md).
-- Migrations aplicadas somente em Supabase DEV `kfthwjrvgslnsjigqnyc`. Nenhuma alteração de produção/legado/deploy.
-- Revisão independente final não encontrou bloqueador remanescente; corrida entre abertura e arquivamento foi coberta por teste concorrente e migration `20261016133113`.
+- **Ciclo 05 — App 02 Precificação de Produtos e Combos:** spec e plano TDD aprovados pelo fundador; checkpoint documental concluído; implementação ainda não iniciada.
+- Ver [spec aprovada](superpowers/specs/2026-10-16-pricing-design.md), [plano TDD aprovado](superpowers/plans/2026-10-16-pricing.md) e [ADR 0004 aprovada](adr/0004-pricing-incidence-and-combos.md). IMP-016/017 e o vínculo atual da ficha foram aprovados em 2026-10-16; DDL/integração aguardam alvo de banco isolado autorizado.
+- Escopo do prompt: produtos/variações/combos, custo manual ou custo de ficha autorizado, perfis de canal, simulações e snapshots históricos; T-15 a T-18.
 
-## Estado Git e próximo passo
+## Ciclo anterior e estado Git
 
-- Base: commit `9433116` (`docs: clarify location audit invariants`), com histórico do Ciclo 03 preservado.
-- Alterações do Ciclo 04 foram organizadas em commits pequenos; após publicação, abrir PR para revisão humana.
-- Revisão independente final do diff concluída para tenant/RLS, precisão financeira e concorrência; não há bloqueadores remanescentes. Não fazer merge nem iniciar Ciclo 05 automaticamente.
-- PR #4 aberto para revisão humana: [Ciclo 04: locais de estoque e auditoria física](https://github.com/makollykalk/Donos_next/pull/4), base `codex/ciclo-03-recipes-yield`. Sem merge.
+- **Ciclo 04 — locais de estoque e auditoria física:** implementação concluída, revisada independentemente e merged no PR #4 em 2026-10-16. Merge commit `c0b19024ea87041a971cabe018cf8d005c82eb46`; base `codex/ciclo-03-recipes-yield`.
+- Ver [spec](superpowers/specs/2026-10-15-stock-locations-audit-design.md), [plano TDD](superpowers/plans/2026-10-15-stock-locations-audit.md) e [evidências](evidence/ciclo-04-stock-locations-audit.md).
+- Checkout atual do Ciclo 05: branch `codex/ciclo-05-pricing`, criada a partir da branch-base após o merge do PR #4. O histórico do Ciclo 04 está incluído.
+- PR #4: [Ciclo 04: locais de estoque e auditoria física](https://github.com/makollykalk/Donos_next/pull/4).
 
-## Ambiente e ressalvas
+## Ambiente e ressalvas herdadas
 
-- Node disponível no shim é 24.19.0, abaixo do engine mínimo `>=24.22.0 <25`; build concluiu com aviso.
-- Sem Docker/Podman; replay local de todas as migrations desde vazio permanece pendente. Integração foi validada no DEV autorizado.
+- Node disponível no shim é 24.19.0, abaixo do engine mínimo `>=24.22.0 <25`; a suíte unitária local concluiu com aviso.
+- Sem Docker/Podman; replay local de todas as migrations desde vazio permanece pendente. Não usar reset remoto para substituir essa prova.
+- No Ciclo 04, os testes de integração específicos foram aprovados no Supabase DEV autorizado. A suíte ampla não foi repetida inteira depois de quatro correções; não declarar uma única execução integral totalmente verde.
 - Advisories DEV: Auth leaked-password protection desabilitada (WARN) e avisos informativos de FKs sem índice/índices ainda não usados; detalhes na evidência do Ciclo 04.
+- Nenhuma decisão do Ciclo 04 autoriza produção/legado/deploy. O Ciclo 05 não recebeu autorização para operar em banco remoto.

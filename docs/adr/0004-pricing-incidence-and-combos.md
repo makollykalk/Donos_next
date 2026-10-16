@@ -4,7 +4,7 @@ Data: 16/10/2026. **Estado: aprovada pelo fundador em 16/10/2026, após confirma
 
 ## Contexto
 
-O motor precisa converter metas de margem/CMV em preço de lista e apresentar métricas coerentes depois de descontos, taxas, tributos e custos por venda. Um combo pode substituir somente parte das embalagens dos seus componentes. A V3 define a fórmula linear quando as bases coincidem, mas exige decomposição quando diferem e não define todas as bases/incidências. As escolhas abaixo continuam pendentes até confirmação; a aprovação da spec ou do plano não as substitui.
+O motor precisa converter metas de margem/CMV em preço de lista e apresentar métricas coerentes depois de descontos, taxas, tributos e custos por venda. Um combo pode substituir somente parte das embalagens dos seus componentes. A V3 define a fórmula linear quando as bases coincidem, mas exige decomposição quando diferem e não define todas as bases/incidências. As escolhas abaixo foram confirmadas explicitamente pelo fundador em 16/10/2026.
 
 ## IMP-016 — decisão aprovada pelo fundador
 
@@ -31,11 +31,19 @@ O motor precisa converter metas de margem/CMV em preço de lista e apresentar m�
 
 Manter `recipeId` como vínculo do produto. Cada simulação consulta a versão corrente validada da ficha no `locationId` escolhido explicitamente; grava `recipeVersionId`, `locationId`, fonte, instante de cálculo e breakdown retornado. Edições posteriores da ficha afetam simulações novas, mas não alteram o vínculo nem snapshots existentes. Se a versão corrente estiver não validada ou o custo indisponível, a simulação fica indisponível e o dono pode deliberadamente trocar a fonte para manual.
 
-## Consequências propostas
+## Breakdown exato de custo da receita — decisão técnica do coordenador
+
+O serviço atual calcula custo por razões `bigint` e expõe `costPerFinalUnit` arredondado half-even a 12 casas decimais. O DTO novo manterá esse decimal para exibição e também carregará o total e cada componente como `ExactMoneyRatio`, razão canônica de coeficientes de BRL com escala 10^12. A soma racional dos componentes deverá ser exatamente igual ao total racional; a API não arredonda componentes individualmente.
+
+Cada componente carrega caminho determinístico dos IDs dos componentes desde a ficha raiz até a folha. Uma folha repetida em caminhos distintos permanece como entradas distintas. O papel efetivo é `packaging` se qualquer aresta do caminho declarar embalagem; caso contrário, usa o papel declarado na folha. Razões são reduzidas por MDC; numerator é uma string inteira não negativa, denominator é uma string inteira positiva, ambos limitados explicitamente pelo contrato, e excesso retorna `NUMERIC_RANGE`. Quantidades de venda multiplicam a razão com `bigint`, sem converter para decimal nem arredondar. Esta decomposição não altera o ledger ou o algoritmo de média móvel.
+
+O App 02 persiste no produto apenas o vínculo de ficha (`recipeId`, `locationId`, `quantityPerSale`). Cada simulação chama novamente o serviço autoritativo para obter a versão corrente validada; escala custo/componentes por `quantityPerSale` exatamente e salva versão, custo e componentes no snapshot daquela simulação.
+
+## Consequências
 
 - Contratos guardam base declarada, componentes e paths substituídos; simulações persistem snapshots imutáveis.
 - O custo da receita continua vindo somente pelo serviço/API central autorizado; fonte manual continua disponível para `pricing_core` sem `inventory_core`.
-- Até aprovação explícita e registro da decisão, não implementar as equações que dependem de IMP-016 nem o cálculo/UX de substituição que depende de IMP-017. O caso simples da V3 só pode ser implementado quando sua base estiver aprovada.
+- O breakdown é exato e auditável; payloads têm limite de tamanho/precisão e cenários que excedam o limite são recusados explicitamente.
 
 ## Limites desta aprovação
 

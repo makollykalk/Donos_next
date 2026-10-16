@@ -8,7 +8,7 @@
 
 O App 02 permitirá ao proprietário manter produtos vendáveis, variações, combos e perfis de canal; informar custos manualmente quando o App 01 não estiver contratado; simular preços com metas editáveis de margem de contribuição e CMV; e consultar o custo atual de uma ficha do App 01 pela API central quando a organização tiver o entitlement correspondente. Cada simulação guardará um snapshot reproduzível de custo, composição, bases, taxas, metas, preço sugerido e métricas resultantes.
 
-O App 02 continua independente do estoque e das compras. Não cria, altera nem consulta diretamente tabelas internas de inventário ou receitas. O shell, autenticação, seleção de unidade, contexto e gate `pricing_core` já existem; o fluxo de negócio e motor de precificação ainda não existem.
+O App 02 continua independente do estoque e das compras. Não cria, altera nem consulta diretamente tabelas internas de inventário ou receitas. O shell, autenticação, seleção de unidade, contexto e gate `pricing_core` já existem. Os contratos e o motor puro de cálculo estão implementados; persistência, integração com ficha e interface de negócio ainda estão pendentes.
 
 ## Abordagens consideradas
 
@@ -19,7 +19,7 @@ O App 02 continua independente do estoque e das compras. Não cria, altera nem c
 ## Escopo funcional
 
 - Produtos vendáveis, variações e combos pertencem a uma organização e unidade; dono pode criar/editar/arquivar e consultar seus próprios registros.
-- Custo do produto vem de uma única fonte selecionada explicitamente: `manual` ou `recipe`. Fonte manual guarda valor, moeda e data da edição. Fonte de ficha guarda referência da ficha/versão/local e o DTO retornado pelo serviço central, com fonte e data de cálculo. Nunca converter custo indisponível em zero.
+- Custo do produto vem de uma única fonte selecionada explicitamente: `manual` ou `recipe`. Fonte manual guarda valor, moeda e data da edição. Fonte de ficha guarda apenas o vínculo `recipeId`, local e quantidade por venda; cada simulação consulta a versão corrente validada no serviço central e grava versão, fonte, data e breakdown exatos no próprio snapshot. Nunca converter custo indisponível em zero.
 - Acesso ao App 02 exige `pricing_core`. Fonte `recipe` também exige `inventory_core` da mesma organização. Sem App 01, custo manual continua disponível e o App 02 permanece funcional.
 - Cada perfil de canal registra taxas percentuais e valores fixos, tributos informados pelo dono, descontos e embalagem com sua unidade de incidência declarada. As metas de margem de contribuição e CMV são configuráveis por produto/variação e canal.
 - Simulação mostra custo-base, bases de incidência, taxas, preço atual, preço sugerido, CMV projetado e margem de contribuição projetada separadamente. Metas inválidas/incompatíveis e entradas fora do domínio geram erro/alerta explícito; nenhum resultado silencioso.
@@ -29,12 +29,12 @@ O App 02 continua independente do estoque e das compras. Não cria, altera nem c
 ## Modelo matemático e precisão
 
 - Dinheiro, quantidades, percentuais, divisões e intermediários usam strings decimais, inteiros escalados ou razões `bigint`; nenhum cálculo crítico usa `number` binário.
-- Reutilizar `DecimalStringSchema` e os limites/formatos canônicos atuais dos contratos. O pacote de preço será puro e não dependerá de `domain-inventory` para valuation de estoque. Não instalar nova dependência sem justificativa, versão fixa e lockfile.
+- Reutilizar os formatos canônicos atuais: `InventoryValueStringSchema` para valores BRL finitos, `QuantityStringSchema` para quantidades, `DecimalStringSchema` para taxas/metas e `ExactMoneyRatio` para custo autoritativo de ficha. O pacote de preço será puro e não dependerá de `domain-inventory` para valuation de estoque. Não instalar nova dependência sem justificativa, versão fixa e lockfile.
 - No caso linear da V3, sem desconto e com bases de incidência equivalentes:
   - `P_margem=(C_insumo+C_variavel_fixo)/(1-taxas_proporcionais-impostos_proporcionais-margem_alvo)`.
   - `P_cmv=C_insumo/cmvalvo`, para `cmvalvo > 0`.
   - Com ambas as metas simultâneas válidas, preço sugerido é o maior preço mínimo.
-- Denominador `<= 0`, CMV fora de `(0,1]`, custo inválido, taxa por faixa e bases incompatíveis não passam pela fórmula simplificada. Desconto, taxa fixa e cada base de incidência precisam ser resolvidos por decomposição determinística definida após aprovação de IMP-016/017.
+- Denominador `<= 0`, CMV fora de `(0,1]`, custo inválido, taxa por faixa e bases incompatíveis não passam pela fórmula simplificada. Desconto, taxa fixa e cada base de incidência são resolvidos por decomposição determinística conforme IMP-016/017 aprovadas no ADR 0004.
 - Para uma simulação resolvida, arredondar o preço sugerido para cima ao centavo conforme ADR 0001 e recalcular todas as métricas com o preço final exibido. Não arredondar intermediários para centavos nem truncar razões.
 - Regressão aritmética proposta: `C_insumo=20`, `C_variavel_fixo=2`, taxas proporcionais `10%`, tributos `5%`, margem `25%`, CMV alvo `30%`: `P_margem=36,666…`, `P_cmv=66,666…`, sugestão simultânea `66,67`; métricas recalculadas usam `66,67`.
 
@@ -43,6 +43,7 @@ O App 02 continua independente do estoque e das compras. Não cria, altera nem c
 - App 02 não acessa banco/tabelas do App 01 e não chama uma rota de browser com permissões mais amplas.
 - O backend resolve o ator, organização, unidade e contexto autenticados e valida `pricing_core`; para fonte `recipe`, valida também `inventory_core`, titularidade da ficha/versão, status de medição e local solicitado.
 - Reutilizar o serviço/cálculo autoritativo de receita existente e seu DTO versionado (`RecipeCostDTO`), que já carrega `locationId`, fonte, data e estado. Não duplicar média móvel nem cálculo de ficha.
+- O produto guarda apenas vínculo (`recipeId`, local e quantidade por venda). Cada simulação consulta novamente a versão corrente validada. DTO preserva o decimal de custo arredondado para exibição e carrega razões racionais exatas do total/componentes para precificação; componentes não são arredondados separadamente.
 - O endpoint público atual de custo de receita está sob a autorização de `inventory_core`; para uma chamada originada pelo App 02, o serviço central precisa ser reutilizado internamente com os dois entitlements verificados, sem enfraquecer o endpoint do App 01. API ou ficha indisponível mantém estado explícito. Trocar manualmente a fonte exige ação deliberada do dono.
 
 ## Combos e embalagens
@@ -58,13 +59,11 @@ O App 02 continua independente do estoque e das compras. Não cria, altera nem c
 - Mutações usam transações, validação Zod, idempotency key conforme o padrão API existente e trilha de auditoria. A tabela de simulações não aceita UPDATE/DELETE pelo runtime.
 - Testes incluem organizações distintas, duas unidades da mesma organização, IDs forjados, tentativas de referenciar ficha de outro tenant, entitlement ausente/expirado e isolamento de snapshots.
 
-## Decisões abertas que bloqueiam implementação
+## Decisões comerciais registradas
 
-- **IMP-016 — bases de receita líquida, desconto, taxas e tributos.** A proposta atual diz que a receita usada como base é após descontos comerciais e antes das taxas, mas não escolhe a base de incidência real de cada taxa/tributo por canal. Confirmar com fundador/contabilidade: preço de tabela, ordem do desconto, base das taxas e tributos, denominador de margem/CMV e decomposição quando divergirem. Até a decisão, somente o caso linear sem desconto e de bases equivalentes está matematicamente definido.
-- **IMP-017 — embalagem de combos.** Confirmar a regra para substituição parcial/total de embalagem individual, como identificar custo de embalagem já embutido no snapshot de ficha e a incidência de taxa fixa por venda versus por pedido. Até a decisão, não codificar regras ambíguas de substituição ou rateio.
-- Vínculo de produto com receita (versão fixa ou versão corrente), seleção de local para custo integrado e semântica de atualidade do custo devem ser explícitos no contrato do ciclo. Proposta: manter `recipeId` como vínculo e solicitar versão/local atuais ao serviço autoritativo; todo snapshot salva `recipeVersionId`, `locationId` e `calculatedAt`.
+IMP-016 e IMP-017 foram confirmadas pelo fundador em 16/10/2026, junto com o vínculo à versão corrente validada da ficha no local escolhido. As regras executáveis estão em `docs/adr/0004-pricing-incidence-and-combos.md`. Tributos continuam sendo valores manuais com suporte contábil; o produto não infere regime fiscal.
 
-Registrar decisões aprovadas e qualquer escolha técnica nova em `docs/05-REGISTRO-DE-DECISOES.md`/ADR antes de codificar. Não presumir aprovação de decisões comerciais por este documento.
+Qualquer decisão técnica nova deve ser registrada em `docs/05-REGISTRO-DE-DECISOES.md`/ADR antes de codificar.
 
 ## Fora de escopo e limites
 
@@ -82,4 +81,4 @@ Registrar decisões aprovadas e qualquer escolha técnica nova em `docs/05-REGIS
 
 ## Gate desta proposta
 
-Desenho e plano TDD foram aprovados para implementação. A aprovação não resolve IMP-016/017. As decisões financeiras/comerciais bloqueadoras devem ser registradas antes do código dependente, e qualquer DDL/integração requer alvo descartável local comprovado ou autorização específica para o DEV DONOS Next deste ciclo.
+Desenho, plano TDD e decisões IMP-016/017 foram aprovados para implementação. DDL/integração requer alvo descartável local comprovado ou autorização específica para o DEV DONOS Next deste ciclo.

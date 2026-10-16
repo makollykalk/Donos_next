@@ -68,6 +68,9 @@ importers:
       '@donos/domain-inventory':
         specifier: workspace:*
         version: link:../../packages/domain-inventory
+      '@donos/domain-pricing':
+        specifier: workspace:*
+        version: link:../../packages/domain-pricing
       '@donos/domain-purchases':
         specifier: workspace:*
         version: link:../../packages/domain-purchases
@@ -220,6 +223,12 @@ importers:
       '@donos/db':
         specifier: workspace:*
         version: link:../db
+
+  packages/domain-pricing:
+    dependencies:
+      '@donos/contracts':
+        specifier: workspace:*
+        version: link:../contracts
 
   packages/domain-purchases:
     dependencies:

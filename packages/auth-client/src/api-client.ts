@@ -5,10 +5,11 @@ export class ApiFailure extends Error {
     super(messages[code]??(status===503?'Serviço indisponível. Tente novamente.':status===403?'Acesso não concedido para esta empresa.':status===401?'Entre novamente.':['CONTEXT_EXPIRED','CONTEXT_MISMATCH'].includes(code)?'Contexto expirado ou alterado. Selecione novamente.':'Não foi possível concluir a operação.'));
   }
 }
+type ApiRequestOptions={method?:string;body?:unknown;contextToken?:string;idempotencyKey?:string};
 export function createApiClient(auth:SupabaseClient,baseUrl:string){
   const base=new URL(baseUrl);
   if(!['127.0.0.1','localhost'].includes(base.hostname) || base.protocol!=='http:')throw Error('API local inválida.');
-  return async function apiRequest<T>(path:string,options:{method?:string;body?:unknown;contextToken?:string;idempotencyKey?:string}={}):Promise<T>{
+  async function authenticatedFetch(path:string,options:ApiRequestOptions):Promise<Response>{
     if(!path.startsWith('/v1/') || path.includes('://'))throw Error('Rota inválida.');
     const {data,error}=await auth.auth.getSession();
     if(error || !data.session)throw new ApiFailure(401,'UNAUTHENTICATED');
@@ -19,7 +20,15 @@ export function createApiClient(auth:SupabaseClient,baseUrl:string){
     let response:Response;
     try{response=await fetch(`${base.origin}${path}`,{method:options.method??'GET',headers,cache:'no-store',signal:AbortSignal.timeout(20000),...(options.body===undefined?{}:{body:JSON.stringify(options.body)})});}catch{throw new ApiFailure(503,'DEPENDENCY_UNAVAILABLE');}
     if(!response.ok){const error=await response.json().catch(()=>null) as {error?:{code?:string}}|null;throw new ApiFailure(response.status,error?.error?.code??'DEPENDENCY_UNAVAILABLE');}
+    return response;
+  }
+  async function apiRequest<T>(path:string,options:ApiRequestOptions={}):Promise<T>{
+    const response=await authenticatedFetch(path,options);
     return (response.status===204?undefined:await response.json()) as T;
-  };
+  }
+  return Object.assign(apiRequest,{text:async(path:string,options:ApiRequestOptions={}):Promise<string>=>{
+    const response=await authenticatedFetch(path,options);
+    return response.status===204?'':response.text();
+  }});
 }
-export type ApiClient=ReturnType<typeof createApiClient>;
+export type ApiClient={<T>(path:string,options?:ApiRequestOptions):Promise<T>;text?:(path:string,options?:ApiRequestOptions)=>Promise<string>};

@@ -4,21 +4,20 @@ Atualizado em 2026-10-16.
 
 ## Ciclo atual
 
-- **Ciclo 04 — locais de estoque e auditoria física:** implementação concluída na branch `codex/ciclo-04-stock-locations-audit`; aguardando revisão humana antes de merge e antes de iniciar outro ciclo.
-- Escopo: locais físicos, partição de saldo/movimentos/custos, bloqueio durante contagem, contagem guiada cega, divergências compensatórias e relatório imprimível.
-- Especificação e plano aprovados; ver [spec](superpowers/specs/2026-10-15-stock-locations-audit-design.md), [plano TDD](superpowers/plans/2026-10-15-stock-locations-audit.md) e [evidências](evidence/ciclo-04-stock-locations-audit.md).
-- Migrations aplicadas somente em Supabase DEV `kfthwjrvgslnsjigqnyc`. Nenhuma alteração de produção/legado/deploy.
-- Revisão independente final não encontrou bloqueador remanescente; corrida entre abertura e arquivamento foi coberta por teste concorrente e migration `20261016133113`.
+- **Ciclo 06 — listas de compras Premium do App 01:** implementação e releitura independente concluídas; [PR #6](https://github.com/makollykalk/Donos_next/pull/6) aberto para revisão humana, sem merge.
+- Escopo: alertas e limites Base, listas Premium, sugestões, confirmação explícita de compra, compromissos, recebimento parcial associado, histórico, CSV/impressão e interface do App 01.
+- Decisão aprovada: somente compras explicitamente confirmadas pelo dono contam como compromisso; rascunhos e recebimentos ficam fora. Ver [DECISIONS](DECISIONS.md), [ADR-0005](adr/0005-shopping-commitments.md), [spec](superpowers/specs/2026-10-16-shopping-design.md) e [plano TDD](superpowers/plans/2026-10-16-shopping.md).
+- Migrations `20261016162828`, `20261016164932` e `20261016165528` aplicadas somente no Supabase DONOS Next DEV `kfthwjrvgslnsjigqnyc`. Nenhuma alteração em produção, legado, deploy ou cobrança.
+- Evidências e limitações: [Ciclo 06](evidence/ciclo-06-shopping.md). Sem merge.
 
 ## Estado Git e próximo passo
 
-- Base: commit `9433116` (`docs: clarify location audit invariants`), com histórico do Ciclo 03 preservado.
-- Alterações do Ciclo 04 foram organizadas em commits pequenos; após publicação, abrir PR para revisão humana.
-- Revisão independente final do diff concluída para tenant/RLS, precisão financeira e concorrência; não há bloqueadores remanescentes. Não fazer merge nem iniciar Ciclo 05 automaticamente.
-- PR #4 aberto para revisão humana: [Ciclo 04: locais de estoque e auditoria física](https://github.com/makollykalk/Donos_next/pull/4), base `codex/ciclo-03-recipes-yield`. Sem merge.
+- Branch: `codex/ciclo-06-shopping`, baseada no histórico local do Ciclo 04. Checkout principal permanece separado; implementação ocorre no worktree listado acima.
+- Passaram 150 testes unitários, 6 testes de integração selecionados, E2E mockado 1/1, typecheck, lint, build e diff check. Revisão independente não encontrou bloqueadores; lacuna remanescente de cobertura RLS está descrita na evidência.
+- PR #6 compara `codex/ciclo-06-shopping` com `codex/ciclo-04-stock-locations-audit`; estado aberto e mergeable na última consulta. Não fazer merge nem deploy automaticamente.
 
 ## Ambiente e ressalvas
 
-- Node disponível no shim é 24.19.0, abaixo do engine mínimo `>=24.22.0 <25`; build concluiu com aviso.
-- Sem Docker/Podman; replay local de todas as migrations desde vazio permanece pendente. Integração foi validada no DEV autorizado.
-- Advisories DEV: Auth leaked-password protection desabilitada (WARN) e avisos informativos de FKs sem índice/índices ainda não usados; detalhes na evidência do Ciclo 04.
+- Node do ambiente v24.19.0 e build runtime v24.15.0, abaixo de `>=24.22.0 <25`; comandos concluíram com aviso. Repetir gates no runtime suportado.
+- Sem Docker/Podman nem DB descartável; replay integral desde banco vazio permanece pendente. Integrações selecionadas foram executadas no DEV autorizado com fixtures sintéticas.
+- A UI não tem endpoint para consultar entitlement no carregamento; após cancelamento Premium, bloqueia ações quando recebe 403. A primeira abertura pode exibir ações até a tentativa protegida retornar 403.

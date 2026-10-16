@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ExactMoneyRatioSchema } from './exact-money.js';
 import { BaseUnitSchema, InputUnitSchema, InventoryValueStringSchema, QuantityStringSchema } from './inventory-schemas.js';
 import { UUIDSchema } from './schemas.js';
 
@@ -136,4 +137,10 @@ export const RecipeListQuerySchema = z.strictObject({
 export const RecipeCostRatioSchema = z.strictObject({
   numerator: InventoryValueStringSchema,
   denominator: positiveQuantity,
+});
+
+export const RecipeCostComponentSchema = z.strictObject({
+  componentPath: z.array(RecipeUUIDSchema).min(1).max(16),
+  role: RecipeComponentRoleSchema,
+  costPerFinalUnitExact: ExactMoneyRatioSchema,
 });

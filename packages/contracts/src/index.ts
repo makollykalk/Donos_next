@@ -5,3 +5,6 @@ export * from './inventory.js';
 export * from './inventory-schemas.js';
 export * from './recipes.js';
 export * from './recipe-schemas.js';
+export * from './exact-money.js';
+export * from './pricing.js';
+export * from './pricing-schemas.js';

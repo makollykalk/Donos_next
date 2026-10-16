@@ -12,3 +12,4 @@ export * from './inventory-ledger-repository.js';
 export * as purchaseRepository from './purchase-repository.js';
 export * as inventoryRead from './inventory-read-repository.js';
 export * as recipeRepository from './recipe-repository.js';
+export * as pricingRepository from './pricing-repository.js';

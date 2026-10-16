@@ -15,6 +15,7 @@ Atualizado em 2026-10-16.
 - Base: commit `9433116` (`docs: clarify location audit invariants`), com histórico do Ciclo 03 preservado.
 - Alterações do Ciclo 04 foram organizadas em commits pequenos; após publicação, abrir PR para revisão humana.
 - Revisão independente final do diff concluída para tenant/RLS, precisão financeira e concorrência; não há bloqueadores remanescentes. Não fazer merge nem iniciar Ciclo 05 automaticamente.
+- PR #4 aberto para revisão humana: [Ciclo 04: locais de estoque e auditoria física](https://github.com/makollykalk/Donos_next/pull/4), base `codex/ciclo-03-recipes-yield`. Sem merge.
 
 ## Ambiente e ressalvas
 

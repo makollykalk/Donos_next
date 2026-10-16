@@ -5,6 +5,7 @@ Branch: `codex/ciclo-04-stock-locations-audit`
 Base preservada: `9433116 docs: clarify location audit invariants` (sobre o histórico do Ciclo 03)
 Spec aprovada: `docs/superpowers/specs/2026-10-15-stock-locations-audit-design.md`
 Plano aprovado: `docs/superpowers/plans/2026-10-15-stock-locations-audit.md`
+PR de revisão humana: [#4](https://github.com/makollykalk/Donos_next/pull/4), base `codex/ciclo-03-recipes-yield`; sem merge.
 
 ## Entrega
 

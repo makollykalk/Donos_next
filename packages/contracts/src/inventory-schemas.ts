@@ -20,12 +20,19 @@ export const InputUnitSchema=z.discriminatedUnion('kind',[
   z.strictObject({kind:z.literal('standard'),code:z.enum(['kg','g','L','mL','un'])}),
   z.strictObject({kind:z.literal('package'),conversionId:InventoryUUIDSchema}),
 ]);
+export const ConversionSnapshotSchema=z.strictObject({
+  ingredientId:InventoryUUIDSchema,baseUnit:BaseUnitSchema,allowFractionalCount:z.boolean(),inputUnit:InputUnitSchema,
+  factorToBase:PriceStringSchema.refine(v=>v!=='0'),conversionId:InventoryUUIDSchema.nullable(),
+  version:z.string().regex(/^[1-9][0-9]*(?![\s\S])/u).nullable(),label:name.nullable(),
+}).refine(v=>v.inputUnit.kind==='package'
+  ?v.conversionId!==null&&v.version!==null&&v.label!==null
+  :v.conversionId===null&&v.version===null&&v.label===null);
 export const CreateIngredientSchema=z.strictObject({name,baseUnit:BaseUnitSchema,allowFractionalCount:z.boolean().default(false)});
 export const PatchIngredientSchema=z.strictObject({name:name.optional(),archived:z.boolean().optional()}).refine(v=>Object.keys(v).length>0);
 export const CreateSupplierSchema=z.strictObject({name,contact:z.string().trim().max(240).optional()});
 export const PatchSupplierSchema=z.strictObject({name:name.optional(),contact:z.string().trim().max(240).nullable().optional(),archived:z.boolean().optional()}).refine(v=>Object.keys(v).length>0);
 export const CreateConversionSchema=z.strictObject({label:name,factorToBase:PriceStringSchema.refine(v=>v!=='0')});
-export const ReceiptLineSchema=z.strictObject({ingredientId:InventoryUUIDSchema,quantity:positiveQuantity,unit:InputUnitSchema,unitPrice:PriceStringSchema,zeroCostReason:reason.optional()}).refine(v=>v.unitPrice!=='0'||!!v.zeroCostReason);
+export const ReceiptLineSchema=z.strictObject({ingredientId:InventoryUUIDSchema,quantity:positiveQuantity,unit:InputUnitSchema,unitPrice:PriceStringSchema,zeroCostReason:reason.optional(),commitmentId:InventoryUUIDSchema.optional()}).refine(v=>v.unitPrice!=='0'||!!v.zeroCostReason);
 export const CreateReceiptSchema=z.strictObject({supplierId:InventoryUUIDSchema,locationId:InventoryUUIDSchema,documentDate:z.iso.date().optional(),documentReference:name.optional(),items:z.array(ReceiptLineSchema).min(1).max(50)}).refine(v=>new Set(v.items.map(i=>i.ingredientId)).size===v.items.length);
 export const ReceiveReceiptSchema=z.strictObject({receivedConfirmed:z.literal(true)});
 export const IssueSchema=z.strictObject({ingredientId:InventoryUUIDSchema,locationId:InventoryUUIDSchema,quantity:positiveQuantity,unit:InputUnitSchema,reason});

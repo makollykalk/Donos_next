@@ -13,7 +13,7 @@ export async function requireSupplier(ctx:RestaurantContext,id:string,tx:Tx,acti
 }
 export async function createIngredient(ctx:RestaurantContext,input:CreateIngredientInput,tx:Tx):Promise<Ingredient>{
  const row=(await tx.query<Ingredient>(`insert into core.ingredients(organization_id,restaurant_id,name,base_unit,allow_fractional_count) values($1,$2,$3,$4,$5) returning ${ingredientColumns}`,[ctx.organizationId,ctx.restaurantId,input.name,input.baseUnit,input.allowFractionalCount])).rows[0]!;
- await tx.query('insert into core.stock_balances(organization_id,restaurant_id,ingredient_id) values($1,$2,$3)',[ctx.organizationId,ctx.restaurantId,row.id]);return row;
+ await tx.query('insert into core.stock_balances(organization_id,restaurant_id,location_id,ingredient_id) select $1,$2,id,$3 from core.stock_locations where organization_id=$1 and restaurant_id=$2 and not archived',[ctx.organizationId,ctx.restaurantId,row.id]);return row;
 }
 export async function patchIngredient(ctx:RestaurantContext,id:string,input:PatchIngredientInput,tx:Tx):Promise<Ingredient>{
  const old=await requireIngredient(ctx,id,tx);

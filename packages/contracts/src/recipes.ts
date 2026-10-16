@@ -62,6 +62,7 @@ export type RecipeCostDTO = {
   reason: RecipeCostUnavailableReason | null;
   recipeId: string;
   recipeVersionId: string;
+  locationId: string;
   measurementId: string | null;
   calculatedAt: string;
   source: 'inventory_moving_average';

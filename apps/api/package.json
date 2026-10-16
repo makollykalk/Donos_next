@@ -3,5 +3,16 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "dependencies": { "@donos/contracts": "workspace:*", "@donos/db":"workspace:*", "@donos/domain-core":"workspace:*", "@donos/domain-billing":"workspace:*", "@supabase/supabase-js":"2.117.3", "@fastify/cors":"11.3.1", "fastify": "5.12.7" }
+  "dependencies": {
+    "@donos/contracts": "workspace:*",
+    "@donos/db": "workspace:*",
+    "@donos/domain-core": "workspace:*",
+    "@donos/domain-billing": "workspace:*",
+    "@supabase/supabase-js": "2.117.3",
+    "@fastify/cors": "11.3.1",
+    "fastify": "5.12.7",
+    "@donos/domain-inventory": "workspace:*",
+    "@donos/domain-purchases": "workspace:*",
+    "@donos/domain-recipes": "workspace:*"
+  }
 }

@@ -17,6 +17,9 @@
   "references": [
     {
       "path": "../../packages/auth-client"
+    },
+    {
+      "path": "../../packages/contracts"
     }
   ],
   "include": [

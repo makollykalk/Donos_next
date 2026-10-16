@@ -8,6 +8,8 @@ export default defineConfig({
       '@donos/db': fileURLToPath(new URL('./packages/db/src/index.ts', import.meta.url)),
       '@donos/domain-core': fileURLToPath(new URL('./packages/domain-core/src/index.ts', import.meta.url)),
       '@donos/domain-billing': fileURLToPath(new URL('./packages/domain-billing/src/index.ts', import.meta.url)),
+      '@donos/domain-inventory': fileURLToPath(new URL('./packages/domain-inventory/src/index.ts', import.meta.url)),
+      '@donos/domain-purchases': fileURLToPath(new URL('./packages/domain-purchases/src/index.ts', import.meta.url)),
       '@donos/auth-client': fileURLToPath(new URL('./packages/auth-client/src/index.ts', import.meta.url)),
     },
   },

@@ -1,8 +1,8 @@
 # ADR 0003 — Valoração e integridade do estoque Base
 
-Data: 15/10/2026. **Aprovada pelo fundador em 15/10/2026, condicionada ao fechamento e à revisão do Ciclo 01; não implementada.** Complementa ADR 0001, respeita DEC-001 a DEC-013 e não muda a fronteira entre os dois apps. Aprovação desta ADR/spec/plano autoriza somente o Ciclo 02, depois do gate do Ciclo 01.
+Data: 15/10/2026. **Aprovada pelo fundador em 15/10/2026, com gate do Ciclo 01 cumprido pela revisão humana. Ciclo 02 implementado e validado para revisão do PR; evidências em docs/evidence/ciclo-02-inventory.md.** Complementa ADR 0001, respeita DEC-001 a DEC-013 e não muda a fronteira entre os dois apps. Aprovação desta ADR/spec/plano autoriza somente o Ciclo 02, depois do gate do Ciclo 01.
 
-## Decisão proposta
+## Decisão aprovada
 
 Ledger append-only e projeção de saldo na mesma transação PostgreSQL. Motor puro com coeficientes `bigint`; banco com `numeric` exato e limites/escala explícitos. Nenhuma dependência decimal nova. A API recebe e devolve strings; não registra parsers pg de numeric/int8 para Number.
 
@@ -16,7 +16,7 @@ Ledger append-only e projeção de saldo na mesma transação PostgreSQL. Motor 
 
 ## Precisão e média
 
-Quantidade: até 18 inteiros/6 casas; preço de compra informado: até 18 inteiros/12 casas; valor registrado por insumo: até 26 inteiros/12 casas. Propor domínios PostgreSQL sobre `numeric` sem typmod, com CHECK de faixa e `v=trunc(v,escala)`: equivalem às faixas de numeric(24,6)/numeric(38,12), mas recusam excesso de precisão antes de coerção silenciosa. Deltas têm faixa simétrica assinada. NaN/Infinity são explicitamente recusados por comparação com limites finitos.
+Quantidade: até 18 inteiros/6 casas; preço de compra informado: até 18 inteiros/12 casas; valor registrado por insumo: até 26 inteiros/12 casas. Domínios PostgreSQL sobre `numeric` sem typmod, com CHECK de faixa e `v=trunc(v,escala)`, equivalem às faixas de numeric(24,6)/numeric(38,12), mas recusam excesso de precisão antes de coerção silenciosa. Deltas têm faixa simétrica assinada. NaN/Infinity são explicitamente recusados por comparação com limites finitos.
 
 PostgreSQL arredonda valores ao reduzir a escala declarada e `round(numeric)` resolve empates afastando de zero. Por isso nenhum desses comportamentos define o half-even deste domínio. Ver [numeric PostgreSQL 17](https://www.postgresql.org/docs/17/datatype-numeric.html).
 
@@ -35,7 +35,7 @@ A média econômica da época é a razão **Vref/Qref**, constante nas saídas. 
 
 ## Integridade e implementação
 
-Runtime sem UPDATE/DELETE de ledger/histórico. Triggers de imutabilidade e constraint triggers diferidas conferem cadeia e projeção na mesma transação. Funções SECURITY INVOKER com search_path fixo e grants privados. Nenhum SECURITY DEFINER ou bypass RLS proposto. [Triggers de constraint](https://www.postgresql.org/docs/17/sql-createtrigger.html) podem executar no fim da transação; a prova de não permitir commit parcial será obrigatória.
+Runtime sem UPDATE/DELETE de ledger/histórico. Triggers de imutabilidade e constraint triggers diferidas conferem cadeia e projeção na mesma transação. Funções SECURITY INVOKER com search_path fixo e grants privados. Nenhum SECURITY DEFINER ou bypass RLS. [Triggers de constraint](https://www.postgresql.org/docs/17/sql-createtrigger.html) executam no fim da transação; testes SQL reais recusam commit de projeção isolada, movimento sem projeção e recebimento incompleto, e comprovam rollback integral nas falhas injetadas. Resultados e comandos estão no relatório de evidências.
 
 Idempotência reutiliza o escopo organizacional do core. Operação versionada e hash incluem organizationId, restaurantId e DTO normalizado. Reusar a chave em outra unidade conflita409; não recupera resposta de outro contexto. Não é preciso ampliar a enum de scopes do core neste ciclo.
 

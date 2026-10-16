@@ -1,0 +1,63 @@
+import { test, expect } from '@playwright/test';
+import { randomUUID } from 'node:crypto';
+import { createInventoryFixtures } from '../helpers/inventory-fixtures.js';
+import { login } from './owner-fixture.js';
+import { createInventoryService } from '../../apps/api/src/services/inventory.js';
+
+test('owner creates a measured recipe, confirms validation and reads its current cost', async ({ page }) => {
+  test.setTimeout(180000);
+  const fixture = await createInventoryFixtures();
+  const inventory = createInventoryService(fixture.db);
+  const args = [fixture.actor, fixture.selection, fixture.token] as const;
+  try {
+    const ingredient = await inventory.createIngredient(...args, { name: `Farinha receita ${randomUUID()}`, baseUnit: 'kg', allowFractionalCount: false }, randomUUID());
+    const supplier = await inventory.createSupplier(...args, { name: `Fornecedor receita ${randomUUID()}` }, randomUUID());
+    const receipt = await inventory.createReceipt(...args, { supplierId: supplier.id, locationId:fixture.locationId, items: [{ ingredientId: ingredient.id, quantity: '2', unit: { kind: 'standard', code: 'kg' }, unitPrice: '10' }] }, randomUUID());
+    await inventory.receiveReceipt(...args, receipt.id, { receivedConfirmed: true }, randomUUID());
+    const restaurants = await page.request.get(`http://127.0.0.1:3001/v1/organizations/${fixture.selection.organizationId}/restaurants`, { headers: { Authorization: `Bearer ${fixture.jwt}` } });
+    const restaurantBody = await restaurants.json() as { items: { id: string; name: string }[] };
+    const restaurant = restaurantBody.items.find(item => item.id === fixture.selection.restaurantId)!;
+    const organizations = await page.request.get('http://127.0.0.1:3001/v1/organizations', { headers: { Authorization: `Bearer ${fixture.jwt}` } });
+    const organizationBody = await organizations.json() as { items: { id: string; name: string }[] };
+    const organization = organizationBody.items.find(item => item.id === fixture.selection.organizationId)!;
+    await login(page, 'a', 5174);
+    await page.getByRole('button', { name: organization.name, exact: true }).click();
+    await page.getByRole('button', { name: `Selecionar ${restaurant.name}`, exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Estoque da unidade ativa', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Nova ficha', exact: true }).click();
+    await page.getByLabel('Nome da ficha', { exact: true }).fill('Molho de teste');
+    await page.getByRole('button', { name: 'Criar rascunho', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Nova versão de Molho de teste' })).toBeVisible();
+    const editor = page.getByRole('region', { name: 'Editar versão da ficha' });
+    await editor.getByRole('button', { name: 'Adicionar componente', exact: true }).click();
+    const ingredientSelect = editor.getByRole('combobox', { name: 'Insumo', exact: true });
+    await ingredientSelect.selectOption({ value: `ingredient:${ingredient.id}` });
+    await editor.getByLabel('Quantidade usada', { exact: true }).fill('1');
+    await editor.getByRole('button', { name: 'Adicionar etapa', exact: true }).click();
+    await editor.getByRole('combobox', { name: 'Tipo da etapa', exact: true }).selectOption('cooking');
+    await editor.getByLabel('Nome da etapa', { exact: true }).fill('Cocção');
+    await editor.getByRole('button', { name: 'Salvar nova versão', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Rendimento da versão 1' })).toBeVisible();
+    await page.getByLabel('Método e condições da medição', { exact: true }).fill('Balança conferida');
+    await page.getByLabel('Peso/volume bruto empregado (kg)', { exact: true }).fill('1');
+    await page.getByLabel('Resultado líquido após limpeza (kg)', { exact: true }).fill('1');
+    await page.getByLabel('Resultado final após preparo (kg)', { exact: true }).fill('0.8');
+    await page.getByLabel('Quantidade antes da etapa', { exact: true }).fill('1');
+    await page.getByLabel('Quantidade depois da etapa', { exact: true }).fill('0.8');
+    await page.getByRole('button', { name: 'Salvar medição real', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Conferir e validar medição #1', exact: true })).toBeVisible();
+    page.once('dialog', dialog => dialog.accept());
+    await page.getByRole('button', { name: 'Conferir e validar medição #1', exact: true }).click();
+    await expect(page.getByText(/Custo do lote: R\$ 10/u)).toBeVisible();
+    await expect(page.getByText(/Custo por unidade final: R\$ 12,5 \/ kg/u)).toBeVisible();
+    await expect(page.getByText('Rendimento validado', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Criar nova versão', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Nova versão de Molho de teste' })).toBeVisible();
+    await page.getByRole('region', { name: 'Editar versão da ficha' }).getByRole('button', { name: 'Salvar nova versão', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Versão 2: Molho de teste (kg)', exact: true })).toBeVisible();
+    await expect(page.getByText('A versão atual ainda não tem medição real validada.', { exact: false })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Versão 1: Molho de teste (kg)', exact: true })).toBeVisible();
+  } finally {
+    await fixture.close();
+  }
+});

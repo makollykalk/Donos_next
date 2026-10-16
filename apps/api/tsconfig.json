@@ -1,6 +1,38 @@
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": { "composite": true, "declaration": true, "types": ["node"], "rootDir": "src", "outDir": "dist" },
-  "include": ["src/**/*.ts"],
-  "references": [{ "path": "../../packages/contracts" }, {"path":"../../packages/db"}, {"path":"../../packages/domain-core"}, {"path":"../../packages/domain-billing"}]
+  "compilerOptions": {
+    "composite": true,
+    "declaration": true,
+    "types": [
+      "node"
+    ],
+    "rootDir": "src",
+    "outDir": "dist"
+  },
+  "include": [
+    "src/**/*.ts"
+  ],
+  "references": [
+    {
+      "path": "../../packages/contracts"
+    },
+    {
+      "path": "../../packages/db"
+    },
+    {
+      "path": "../../packages/domain-core"
+    },
+    {
+      "path": "../../packages/domain-billing"
+    },
+    {
+      "path": "../../packages/domain-inventory"
+    },
+    {
+      "path": "../../packages/domain-recipes"
+    },
+    {
+      "path": "../../packages/domain-purchases"
+    }
+  ]
 }

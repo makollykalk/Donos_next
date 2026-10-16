@@ -1,5 +1,7 @@
 import {useEffect,useState} from 'react';
 import type {SupabaseClient} from '@supabase/supabase-js';
+import type { ReactNode } from 'react';
+import type { ApiClient } from './api-client.js';
 import type {Capability,Organization,Restaurant,SelectedContext} from '@donos/contracts';
 import {createApiClient,ApiFailure} from './api-client.js';
 import {ContextStore,StaleContextError} from './context-store.js';
@@ -11,7 +13,11 @@ export function createOwnerRuntime(auth:SupabaseClient,apiUrl:string){
   return {auth,api,store};
 }
 export type OwnerRuntime=ReturnType<typeof createOwnerRuntime>;
-export function OwnerApp({runtime,app}:{runtime:OwnerRuntime;app:'portal'|'estoque'|'precificacao'}){
+export type ProtectedContentProps={api:ApiClient;store:ContextStore;selection:SelectedContext};
+export function protectedSelection(access:boolean,selected:Restaurant|null,store:ContextStore):SelectedContext|null{
+  const s=store.snapshot().selection;return access&&selected&&s&&selected.id===s.restaurantId&&selected.organizationId===s.organizationId?s:null;
+}
+export function OwnerApp({runtime,app,renderProtectedContent}:{runtime:OwnerRuntime;app:'portal'|'estoque'|'precificacao';renderProtectedContent?:(props:ProtectedContentProps)=>ReactNode}){
   const{auth,api,store}=runtime;
   const[authenticated,setAuthenticated]=useState(false);const[loading,setLoading]=useState(true);const[error,setError]=useState('');
   const[organizations,setOrganizations]=useState<Organization[]>([]);const[organization,setOrganization]=useState<Organization|null>(null);
@@ -40,7 +46,7 @@ export function OwnerApp({runtime,app}:{runtime:OwnerRuntime;app:'portal'|'estoq
       {unitLoadFailed&&<button disabled={busy} onClick={()=>{void chooseOrganization(organization);}}>Tentar carregar unidades novamente</button>}
       {app==='portal'&&<UnitCreator key={`${organization.id}:${generation}`} onCreate={async(name,key)=>{const captured=organization;await store.submit(generation,()=>api(`/v1/organizations/${captured.id}/restaurants`,{method:'POST',idempotencyKey:key,body:{name}}));store.assertCurrent(generation);await chooseOrganization(captured);}}/>}
       <p>{selected?`Unidade ativa: ${selected.name}`:'Selecione explicitamente uma unidade.'}</p>
-      {access&&app!=='portal'&&<section aria-label="Módulo protegido"><h2>Acesso de demonstração — {app==='estoque'?'Estoque':'Precificação'}</h2><p>{selected?.name}</p><p>Fundação do aplicativo. Operações de negócio serão implementadas nos próximos ciclos.</p></section>}
+      {access&&app!=='portal'&&<section aria-label="Módulo protegido" key={generation}><h2>Acesso de demonstração — {app==='estoque'?'Estoque':'Precificação'}</h2><p>{selected?.name}</p>{renderProtectedContent?(()=>{const selection=protectedSelection(access,selected,store);return selection?renderProtectedContent({api,store,selection}):null;})():<p>Fundação do aplicativo. Operações de negócio serão implementadas nos próximos ciclos.</p>}</section>}
       {app==='portal'&&<ul aria-label="Acessos de demonstração">{capabilities.map(item=><li key={item.feature}>{item.feature}: {item.allowed?'Acesso de demonstração':'Não concedido'}</li>)}</ul>}
     </section>}</main>;
 }

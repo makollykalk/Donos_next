@@ -65,6 +65,15 @@ importers:
       '@donos/domain-core':
         specifier: workspace:*
         version: link:../../packages/domain-core
+      '@donos/domain-inventory':
+        specifier: workspace:*
+        version: link:../../packages/domain-inventory
+      '@donos/domain-purchases':
+        specifier: workspace:*
+        version: link:../../packages/domain-purchases
+      '@donos/domain-recipes':
+        specifier: workspace:*
+        version: link:../../packages/domain-recipes
       '@fastify/cors':
         specifier: 11.3.1
         version: 11.3.1
@@ -80,6 +89,9 @@ importers:
       '@donos/auth-client':
         specifier: workspace:*
         version: link:../../packages/auth-client
+      '@donos/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       react:
         specifier: 19.3.1
         version: 19.3.1
@@ -199,6 +211,36 @@ importers:
       '@donos/db':
         specifier: workspace:*
         version: link:../db
+
+  packages/domain-inventory:
+    dependencies:
+      '@donos/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@donos/db':
+        specifier: workspace:*
+        version: link:../db
+
+  packages/domain-purchases:
+    dependencies:
+      '@donos/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@donos/db':
+        specifier: workspace:*
+        version: link:../db
+      '@donos/domain-inventory':
+        specifier: workspace:*
+        version: link:../domain-inventory
+
+  packages/domain-recipes:
+    dependencies:
+      '@donos/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@donos/domain-inventory':
+        specifier: workspace:*
+        version: link:../domain-inventory
 
 packages:
 

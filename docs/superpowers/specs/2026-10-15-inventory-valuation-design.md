@@ -1,6 +1,6 @@
 # Estoque Base — inventory valuation design
 
-Data: 15/10/2026. **Aprovada pelo fundador em 15/10/2026, condicionada ao fechamento e à revisão do Ciclo 01. Sem implementação Inventory nesta rodada.**
+Data: 15/10/2026. **Aprovada pelo fundador em 15/10/2026, condicionada ao fechamento e à revisão do Ciclo 01. Implementação Inventory autorizada após revisão do core; validada para revisão do PR, com limites e comandos no relatório de evidências.**
 
 Fontes lidas: [AGENTS](../../../AGENTS.md), [V3](../../01-PRODUTO-V3.md), [arquitetura](../../02-ARQUITETURA-E-LIMITES.md), [T-03 a T-10](../../03-CRITERIOS-DE-ACEITE.md), [roadmap](../../04-ROADMAP.md), [ADR 0001](../../adr/0001-decisoes-arquiteturais.md), [DEV cloud](../../adr/0002-ambiente-supabase-dev-cloud.md) e [ADR 0003 proposta](../../adr/0003-inventory-valuation.md). DEC-001 a DEC-013 não são alteradas.
 
@@ -10,15 +10,15 @@ O dono consegue cadastrar insumo/fornecedor, registrar e confirmar compra recebi
 
 Inclui somente Estoque Base do Ciclo 02. Fora: ficha/rendimento, produção de pré-preparo, contagem/auditoria física/PDF, lista Premium, IA, WhatsApp, motor de preços, transferências entre unidades, múltiplos locais, pedidos/cotações, impostos calculados, cobrança, deploy e produção. App 02 continua independente e não ganha CRUD de estoque.
 
-**Não iniciar código enquanto o Ciclo 01 não estiver fechado e revisado.** Atualização de fechamento: gate técnico validado com 90 unitários, 28 integrações e 11 E2E aprovados; revisão independente sem bloqueador e [PR #1](https://github.com/makollykalk/Donos_next/pull/1) entregue. Aguarda revisão humana do core antes do código Inventory. O preflight a seguir é histórico, anterior ao fechamento. Preflight observado na rodada de planejamento: branch `feat/ciclo-01-core-multitenant`; remote novo `https://github.com/makollykalk/Donos_next.git`; alterações de core/UI ainda não commitadas. `.tools/integration-full.log`: 20 testes PASS/11 arquivos; `.tools/usage-edge.log`: mais 5 PASS em execução separada. Não somar essas execuções como uma suíte final. `.tools/e2e-second.log`: 9 PASS/1 FAIL, timeout procurando A1 no caso de contexto expirado; não prova isoladamente falha de isolamento, mas impede declarar o ciclo validado. Fechamento/revisão/relatório/PR do core continuam gates. Não resetar nem sobrescrever essas alterações para começar Inventory.
+**Gate do Ciclo 01 cumprido antes da implementação.** Core validado com 90 unitários, 28 integrações e 11 E2E aprovados; revisão independente sem bloqueador e [PR #1](https://github.com/makollykalk/Donos_next/pull/1) entregue. O fundador concluiu a revisão humana e autorizou este ciclo com “Revisado! siga!”. O preflight do planejamento ainda apontava verificações pendentes do core; esse estado foi superado pelo fechamento registrado em [evidências do Ciclo 01](../../evidence/ciclo-01.md). Nenhum merge ou deploy foi autorizado por essa revisão.
 
-Implementação futura em branch `codex/ciclo-02-inventory`, criada a partir do commit do core aprovado pelo usuário. Aprovar este plano não aprova merge do core nem ignora testes pendentes.
+Implementação em branch `codex/ciclo-02-inventory`, criada a partir do commit do core aprovado pelo usuário (`2df79f9`). Aprovar este plano não aprova merge do core nem ignora testes pendentes.
 
 ## 2. Limites globais
 
 - Coordenador possui migrations, RLS, contratos e integração. Motor puro e revisão de testes podem ser delegados em arquivos exclusivos; UI somente após checkpoint de contrato/API, sem banco mutável compartilhado entre agentes.
 - Reusar Node24.22.0/pnpm11.25.0/TS6.0.3, pg8.23.1, Fastify5.12.7, Zod4.6.7, React19.3.1/Vite8.3.4, Vitest5.0.4/Playwright1.64.1. Nenhuma dependência de produção nova proposta; lock/pins permanecem exatos.
-- API e frontends locais. DB/Auth somente DEV novo autorizado `kfthwjrvgslnsjigqnyc`, com TLS validado, ou Supabase local expressamente configurado. Nunca Donos-Saas, don_madruga ou outro projeto. Revalidar ref/nome/ambiente antes de toda migration; nenhuma migration nesta rodada.
+- API e frontends locais. DB/Auth somente DEV novo autorizado `kfthwjrvgslnsjigqnyc`, com TLS validado, ou Supabase local expressamente configurado. Nunca Donos-Saas, don_madruga ou outro projeto. Revalidar ref/nome/ambiente antes de toda migration. A rodada de planejamento não aplicou migrations; a implementação aprovada aplicou somente as migrations Inventory no DEV autorizado, conforme relatório.
 - Dados de testes sintéticos; credenciais administrativas fora da API/browser/Git. Runtime donos_api, NOBYPASSRLS, não owner. SQL parametrizado na mesma conexão; nenhum efeito externo dentro da transação/retry.
 - Nenhum number/parseFloat/Number/toFixed nos cálculos de quantidade, preço ou valor. UI usa campos text/inputMode decimal e formatação por strings/coeficientes.
 
@@ -214,7 +214,7 @@ CatalogQuery: `{limit?:number,cursor?:UUID,includeArchived?:boolean}`; limit é 
 1. Validar DTO/IDs/chave; verificar identidade e contexto opaco pelo core; BEGIN na conexão do runtime e set_config LOCAL.
 2. Verificar inventory_core dentro dessa transação. Disputar idempotência por org/operation/key antes de lock de negócio; hash inclui unidade, IDs e DTO normalizados. Replay reautorizado retorna imediatamente.
 3. Quando há recebimento/estorno de recebimento, travar header do receipt. Quando necessário, travar fornecedor **antes** do catálogo de ingredientes; ingredientes em ordem lexicográfica UUID. Nenhum caminho adquire receipt/fornecedor depois de ingrediente. Conversão versionada é imutável; criação de versão também trava seu ingrediente. Cadastro de fornecedor trava só fornecedor; criação de rascunho usa fornecedor→ingredientes e cria header novo sem disputa por ID existente.
-4. Garantir saldo zero por INSERT ON CONFLICT DO NOTHING quando necessário; travar todos os saldos `(org,unit,ingredient)` com SELECT FOR UPDATE na mesma ordem. Nenhum cálculo usa estado lido antes dessas travas. Leitura de entidades/grants deve confirmar a mesma organização/unidade.
+4. Garantir saldo zero na mesma transação de criação do insumo; comandos posteriores exigem essa projeção existente e recusam saldo ausente, sem recriar silenciosamente estado corrompido. Travar todos os saldos `(org,unit,ingredient)` com SELECT FOR UPDATE na mesma ordem. Nenhum cálculo usa estado lido antes dessas travas. Leitura de entidades/grants deve confirmar a mesma organização/unidade.
 5. Validar estado ativo, snapshot/quantidade/saldo e elegibilidade de estorno. Calcular com motor puro e validar faixas do resultado. Guardar custos e before/after imutáveis.
 6. Gravar movimentos, projeção, histórico e status do recebimento, auditoria e resposta idempotente. Constraints diferidas validam cadeia/projeção no commit. Qualquer falha dá rollback inteiro; não capturar erro e confirmar transação parcialmente.
 7. Somente após COMMIT responder sucesso. Timeout após commit é recuperável pela mesma chave. Retry no máximo duas novas tentativas para40001/40P01 da operação inteira, nunca validação/saldo insuficiente e sem efeito externo. Depois do limite503.
@@ -247,6 +247,6 @@ Mostrar unidade ativa em todos os formulários. Mudança de contexto invalida ge
 | Falhas | Injeções em cada escrita e na resposta idempotente; zero parcial e retry seguro; pool limpo |
 | Browser | Fluxo canônico, dupla confirmação, unidade trocada com form/fetch abertos, sessão/contexto expirado, plano403 |
 
-T-23 não aplicável sem Storage. Nenhum teste desta spec foi executado nesta rodada: são critérios futuros. Unit puro não substitui canônico/concorrência/RLS no banco. Rodar typecheck, lint, unit, integraçãoSQL/API e E2E, builds três apps/API, audit e diffcheck; registrar comandos/saídas/commits e revisão independente de segurança/precisão/concorrência. Não iniciar Ciclo03 sem revisão humana do Ciclo02.
+T-23 não aplicável sem Storage. Critérios definidos no planejamento; resultados efetivamente executados estão em docs/evidence/ciclo-02-inventory.md. Não interpretar a matriz como aprovação automática de cada cenário. Unit puro não substitui canônico/concorrência/RLS no banco. Rodar typecheck, lint, unit, integraçãoSQL/API e E2E, builds três apps/API, audit e diffcheck; registrar comandos/saídas/commits e revisão independente de segurança/precisão/concorrência. Não iniciar Ciclo03 sem revisão humana do Ciclo02.
 
-Plano: [2026-10-15-inventory-valuation.md](../plans/2026-10-15-inventory-valuation.md). Aprovação solicitada inclui políticas de precisão, rascunho/recebimento, escopos e estorno conservador acima; não presume infraestrutura adicional ou produção.
+Plano: [2026-10-15-inventory-valuation.md](../plans/2026-10-15-inventory-valuation.md). A aprovação humana registrada inclui políticas de precisão, rascunho/recebimento, escopos e estorno conservador acima; não presume infraestrutura adicional ou produção.

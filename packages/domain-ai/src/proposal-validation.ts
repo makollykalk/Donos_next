@@ -1,4 +1,4 @@
-import type { AiTextAction, AiTextCandidate, AiTextMissingField } from '@donos/contracts';
+import { PriceStringSchema, type AiTextAction, type AiTextCandidate, type AiTextMissingField } from '@donos/contracts';
 
 export type InventoryCatalogEntry = { id: string; name: string; baseUnit: 'kg' | 'L' | 'un'; active: boolean };
 export type ValidatedInventoryProposal = {
@@ -64,8 +64,12 @@ export function validateInventoryCandidate(
     if (candidate.action === null) missing.add('action');
     if (candidate.ingredientDescription) missing.add('ingredient');
   }
-  const unitPrice = candidate.unitPrice ?? (candidate.action === 'receipt' && candidate.totalPrice && candidate.quantity && candidate.quantity !== '0'
+  let unitPrice = candidate.unitPrice ?? (candidate.action === 'receipt' && candidate.totalPrice && candidate.quantity && candidate.quantity !== '0'
     ? unitPriceFromTotal(candidate.totalPrice, candidate.quantity) : null);
+  if (unitPrice !== null && !PriceStringSchema.safeParse(unitPrice).success) {
+    unitPrice = null;
+    missing.add('price');
+  }
   const missingFields = [...missing];
   return {
     action: candidate.action, candidate, ingredientId: ingredient?.id ?? null, unitPrice, missingFields,

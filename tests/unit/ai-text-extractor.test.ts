@@ -11,6 +11,19 @@ describe('extractInventoryText', () => {
     expect(extractInventoryText('Comprei 2,5 kg de tomate por R$ 12,50')).toMatchObject({ quantity: '2.5', totalPrice: '12.5' });
   });
 
+  it('parses grouped Brazilian currency without changing its magnitude', () => {
+    expect(extractInventoryText('Comprei 5 kg de arroz por R$ 1.200,00')).toMatchObject({ totalPrice: '1200', ambiguous: false });
+  });
+
+  it('does not treat an explicit per-kilogram price as a receipt total', () => {
+    expect(extractInventoryText('Comprei 5 kg de arroz por R$ 38/kg')).toMatchObject({ totalPrice: null, ambiguous: true });
+  });
+
+  it('marks a trailing second operation or item clause for review', () => {
+    expect(extractInventoryText('Comprei 5 kg de arroz por R$ 40 e recebi feijão')).toMatchObject({ ambiguous: true });
+    expect(extractInventoryText('Comprei 5 kg de arroz por R$ 40 e feijão')).toMatchObject({ ambiguous: true });
+  });
+
   it('leaves unspecified quantity and price missing', () => {
     expect(extractInventoryText('Recebi farinha')).toMatchObject({ action: 'receipt', quantity: null, totalPrice: null, unitPrice: null });
   });

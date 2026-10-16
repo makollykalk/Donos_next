@@ -48,6 +48,13 @@ describe('validateInventoryCandidate', () => {
     expect(validateInventoryCandidate(candidate({ quantity: '2000000000000', totalPrice: '3' }), catalog, selected).unitPrice).toBe('0.000000000002');
   });
 
+  it('keeps an unrepresentable derived price out of the ready result', () => {
+    const result = validateInventoryCandidate(candidate({ totalPrice: '999999999999999999', quantity: '0.000001' }), catalog, selected);
+    expect(result.status).toBe('needs_review');
+    expect(result.missingFields).toContain('price');
+    expect(result.unitPrice).toBeNull();
+  });
+
   it('does not infer supplier and requests price when both price forms are absent', () => {
     const result = validateInventoryCandidate(candidate({ totalPrice: null, unitPrice: null }), catalog, { locationId: 'location-1' });
     expect(result.missingFields).toEqual(expect.arrayContaining(['supplier', 'price']));

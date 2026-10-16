@@ -2,10 +2,15 @@ import { AiTextCandidateSchema, type AiTextCandidate } from '@donos/contracts';
 
 const numberPattern = '(\\d+(?:[.,]\\d+)?)';
 const quantityPattern = new RegExp(`\\b${numberPattern}\\s*(kg|quilogramas?|g|gramas?|l|litros?|ml|mililitros?|unidades?|un)\\b`, 'iu');
+const localizedMoneyPattern = '(\\d{1,3}(?:\\.\\d{3})+(?:,\\d+)?|\\d+(?:[.,]\\d+)?)';
+
 function decimal(value: string): string | null {
-  const normalized = value.replace(',', '.').replace(/^0+(?=\d)/u, '');
-  if (!/^\d+(?:\.\d+)?$/u.test(normalized)) return null;
-  const [whole, fraction = ''] = normalized.split('.');
+  const normalized = value.includes(',')
+    ? value.replace(/\./gu, '').replace(',', '.')
+    : /^\d{1,3}(?:\.\d{3})+$/u.test(value) ? value.replace(/\./gu, '') : value;
+  const withoutLeadingZeroes = normalized.replace(/^0+(?=\d)/u, '');
+  if (!/^\d+(?:\.\d+)?$/u.test(withoutLeadingZeroes)) return null;
+  const [whole, fraction = ''] = withoutLeadingZeroes.split('.');
   const result = `${whole}${fraction ? `.${fraction.replace(/0+$/u, '')}` : ''}`;
   return result.endsWith('.') ? result.slice(0, -1) : result;
 }
@@ -23,6 +28,8 @@ export function extractInventoryText(text: string): AiTextCandidate {
   const issuePattern = /\b(baixa|baixei|baixamos|usei|usamos|consumi|consumimos|perdi|perdemos|descartei|descartamos)\b/iu;
   const receipt = receiptPattern.test(text);
   const issue = issuePattern.test(text);
+  const operationPattern = /\b(comprei|compramos|compra|compras|recebi|recebemos|entrada|chegou|chegaram|baixa|baixei|baixamos|baixe|usei|usamos|consumi|consumimos|perdi|perdemos|descartei|descartamos)\b/giu;
+  const operationCount = [...text.matchAll(operationPattern)].length;
   const quantityMatches = [...text.matchAll(new RegExp(quantityPattern.source, 'giu'))];
   const actions = Number(receipt) + Number(issue);
   if (actions !== 1 || quantityMatches.length > 1) return unsupported('Informe uma ação e um único insumo por vez.');
@@ -38,14 +45,20 @@ export function extractInventoryText(text: string): AiTextCandidate {
   const tail = qmatch ? text.slice((qmatch.index ?? 0) + qmatch[0].length) : '';
   const ingredientMatch = tail.match(/^\s*(?:de|do|da|dos|das)?\s*([^,;.!?\n]+?)(?=\s+(?:por|a|no valor de|custando|porque|para|com motivo)\b|[,;.!?\n]|$)/iu);
   const ingredientDescription = ingredientMatch?.[1]?.trim().replace(/\s+/gu, ' ').slice(0, 120) || null;
-  const money = action === 'receipt' ? tail.match(new RegExp(`\\b(?:por|no valor de|custando)\\s*(?:R\\$\\s*)?${numberPattern}`, 'iu')) : null;
-  const totalPrice = money?.[1] ? decimal(money[1]) : null;
+  const money = action === 'receipt' ? tail.match(new RegExp(`\\b(?:por|no valor de|custando)\\s*(?:R\\$\\s*)?${localizedMoneyPattern}`, 'iu')) : null;
+  const explicitUnitPrice = money
+    ? new RegExp(`^\\s*(?:/\\s*(?:kg|g|l|ml|un)\\b|por\\s+(?:kg|g|l|ml|un)\\b)`, 'iu').test(tail.slice((money.index ?? 0) + money[0].length))
+    : false;
+  const totalPrice = money?.[1] && !explicitUnitPrice ? decimal(money[1]) : null;
   const reasonMatch = action === 'issue' ? text.match(/\b(?:motivo|porque|por causa de)\s+([^.!?\n,;]+)/iu) : null;
   const reason = reasonMatch?.[1]?.trim().slice(0, 240) || null;
+  const extraConjunction = qmatch ? /\be\b/iu.test(tail) : false;
+  const multipleOperations = operationCount > 1;
   const missingData = !ingredientDescription || !qty || !unit || (action === 'receipt' && !totalPrice) || (action === 'issue' && !reason);
+  const ambiguous = missingData || explicitUnitPrice || extraConjunction || multipleOperations;
   return AiTextCandidateSchema.parse({
     action, ingredientDescription, quantity: qty, unit, totalPrice, unitPrice: null, reason,
-    ambiguous: missingData,
-    explanations: missingData ? ['Revise os campos ausentes antes de continuar.'] : [],
+    ambiguous,
+    explanations: ambiguous ? ['Revise os campos e confirme que o texto contém uma única operação.'] : [],
   });
 }

@@ -48,3 +48,22 @@ The requested `implementer-prompt.md` format file was absent in this worktree; t
 - Parser intentionally supports a narrow Portuguese pattern set and requires owner correction for unrecognized phrasing.
 - The allowed change set excludes workspace lockfile/config registration. `pnpm` auto-detected the package and temporarily changed `pnpm-lock.yaml`; that out-of-scope mutation was reverted. Coordinator should ensure the new workspace package is represented in the shared lockfile/configuration during integration.
 - Commit is created after this report and only includes the permitted domain files and the two named tests.
+
+## Independent review fixes — RED → GREEN
+
+Regression tests were written first for each review finding. RED command: `pnpm exec vitest run tests/unit/ai-text-extractor.test.ts tests/unit/ai-proposal-validation.test.ts` — **4 failed, 15 passed**. The failures reproduced: `R$ 1.200,00` becoming `1.2`; `R$ 38/kg` becoming a total; trailing operation/item conjunction accepted as unambiguous; and an over-range derived price returning `ready`.
+
+Fixes:
+
+- Parse Brazilian grouped currency by removing grouping dots when a decimal comma is present (or valid thousands grouping is present), preserving `R$ 1.200,00` as `1200`.
+- Recognize explicit `/kg`, `/g`, `/L`, `/mL`, `/un` and `por <unit>` suffixes as unit-price semantics unsupported by this DTO parser; keep total price null and mark ambiguous for review.
+- Count operation cues and flag repeated operations; flag conjunction-tail content after the extracted quantity to require review for additional item/operation clauses.
+- Validate derived or supplied unit price against `PriceStringSchema`; out-of-range values are returned as null and add `price` to missing fields, preventing `ready`.
+
+GREEN evidence:
+
+- `pnpm exec vitest run tests/unit/ai-text-extractor.test.ts tests/unit/ai-proposal-validation.test.ts` — **2 files passed, 19 tests passed**.
+- `pnpm exec tsc -b packages/domain-ai --pretty false` — **passed**.
+- `pnpm test:unit` — **23 files passed, 172 tests passed**; Node engine warning remains (`v24.19.0`, requested `>=24.22.0 <25`).
+
+Self-review: grouped prices and unit-price suffixes are conservative and deterministic. Conjunction detection intentionally prefers review over a possibly incomplete proposal, including compound item clauses. Derived price now respects the frozen price schema bound; no schema or shared configuration changed. Only the two domain source files, two named test files, and this report were changed for this fix cycle.

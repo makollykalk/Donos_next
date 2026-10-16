@@ -27,6 +27,7 @@ export class RecipeCalculationError extends Error {
 export type ResolvedRecipeComponent = RecipeResolvedComponent & { duplicateUseReason?: string };
 export type RecipeGraphNode = { version: RecipeVersion; components: ResolvedRecipeComponent[] };
 export type RecipeCalculationInput = {
+  locationId: string;
   rootVersionId: string;
   versions: Record<string, RecipeGraphNode>;
   measurements: Record<string, RecipeYieldMeasurement | undefined>;
@@ -162,7 +163,7 @@ function assertDuplicateConfirmation(components: ResolvedRecipeComponent[]): voi
 function unavailable(input: RecipeCalculationInput, version: RecipeVersion, reason: RecipeCostDTO['reason']): RecipeCostDTO {
   return {
     status: 'unavailable', reason, recipeId: version.recipeId, recipeVersionId: version.id,
-    measurementId: input.measurements[version.id]?.id ?? null, calculatedAt: input.calculatedAt,
+    locationId: input.locationId, measurementId: input.measurements[version.id]?.id ?? null, calculatedAt: input.calculatedAt,
     source: 'inventory_moving_average', currency: 'BRL', finalYield: null, batchCost: null,
     costPerFinalUnit: null, stockSources: [],
   };
@@ -230,7 +231,7 @@ export function calculateRecipeCost(input: RecipeCalculationInput): RecipeCostDT
     }
     const stockSources = [...expanded.sources.values()].sort((a, b) => a.ingredientId.localeCompare(b.ingredientId));
     return {
-      status: 'available', reason: null, recipeId: expanded.version.recipeId, recipeVersionId: expanded.version.id,
+      status: 'available', reason: null, recipeId: expanded.version.recipeId, recipeVersionId: expanded.version.id, locationId: input.locationId,
       measurementId: expanded.measurement.id, calculatedAt: input.calculatedAt, source: 'inventory_moving_average',
       currency: 'BRL', finalYield: { quantity: expanded.measurement.finalQuantity, unit: expanded.version.outputUnit },
       batchCost, costPerFinalUnit, stockSources,

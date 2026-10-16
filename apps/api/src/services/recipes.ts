@@ -36,7 +36,9 @@ export function createRecipeService(db: Database): RecipeService {
     await appendRecipeAudit(ctx, { action, entityId: entity.id }, tx);
     return entity;
   }
-  async function cost(ctx: RestaurantContext, recipeId: string, tx: Tx, requestedVersionId?: string): Promise<RecipeCostDTO> {
+  async function cost(ctx: RestaurantContext, recipeId: string, locationId: string, tx: Tx, requestedVersionId?: string): Promise<RecipeCostDTO> {
+    const location = (await tx.query<Row>('select id from core.stock_locations where organization_id=$1 and restaurant_id=$2 and id=$3 and not archived', [ctx.organizationId, ctx.restaurantId, locationId])).rows[0];
+    if (!location) throw new DomainError('RESOURCE_NOT_FOUND', 404);
     const root = await recipeRepository.getRecipe(ctx, recipeId, tx);
     const rootVersion = requestedVersionId ? root.versions.find((version) => version.id === requestedVersionId) : root.currentVersion;
     if (!rootVersion) throw new DomainError('RESOURCE_CONFLICT', 409);
@@ -84,14 +86,14 @@ export function createRecipeService(db: Database): RecipeService {
       measurements[version.id] = validatedMeasurement;
     }
     if (ingredientIds.size) {
-      const rows = (await tx.query<Row>('select ingredient_id,quantity,value,reference_quantity,reference_value,sequence,last_movement_id from core.stock_balances where organization_id=$1 and restaurant_id=$2 and ingredient_id=any($3::uuid[]) for share', [ctx.organizationId, ctx.restaurantId, [...ingredientIds]])).rows;
+      const rows = (await tx.query<Row>('select ingredient_id,quantity,value,reference_quantity,reference_value,sequence,last_movement_id from core.stock_balances where organization_id=$1 and restaurant_id=$2 and location_id=$3 and ingredient_id=any($4::uuid[]) for share', [ctx.organizationId, ctx.restaurantId, locationId, [...ingredientIds]])).rows;
       for (const row of rows) {
         const quantity = asText(row.quantity);
         balances[asText(row.ingredient_id)] = { ingredientId: asText(row.ingredient_id), sequence: asText(row.sequence), lastMovementId: row.last_movement_id as string | null, averageCostRatio: quantity === '0' ? null : { numerator: asText(row.reference_value), denominator: asText(row.reference_quantity) } };
       }
     }
     const calculatedAt = asText((await tx.query<Row>('select clock_timestamp()::text as now')).rows[0]!.now);
-    const result = calculateRecipeCost({ rootVersionId: rootVersion.id, versions, measurements, balances, calculatedAt });
+    const result = calculateRecipeCost({ locationId, rootVersionId: rootVersion.id, versions, measurements, balances, calculatedAt });
     if (result.status === 'unavailable' && result.reason === 'NO_VALIDATED_MEASUREMENT' && root.versions.some((v) => v.id !== root.currentVersionId && root.measurements.some((m) => m.recipeVersionId === v.id && m.validation))) {
       return { ...result, reason: 'CURRENT_VERSION_NOT_VALIDATED' };
     }
@@ -104,8 +106,12 @@ export function createRecipeService(db: Database): RecipeService {
     recordYieldMeasurement: (actor, selection, token, recipeId, input, key) => mutate(actor, selection, token, 'measurement.record', key, { recipeId, input }, (ctx, tx) => audit(ctx, 'recipe.measurement.recorded', recipeRepository.recordYieldMeasurement(ctx, recipeId, input, tx), tx)),
     validateYieldMeasurement: (actor, selection, token, recipeId, measurementId, key) => mutate(actor, selection, token, 'measurement.validate', key, { recipeId, measurementId }, async (ctx, tx) => {
       const result = await recipeRepository.validateYieldMeasurement(ctx, recipeId, measurementId, tx);
-      const calculated = await cost(ctx, recipeId, tx, result.recipeVersionId);
-      if (calculated.status === 'available') {
+      const activeLocations = (await tx.query<Row>('select id from core.stock_locations where organization_id=$1 and restaurant_id=$2 and not archived order by id for share', [ctx.organizationId, ctx.restaurantId])).rows;
+      if (!activeLocations.length) throw new DomainError('DEPENDENCY_UNAVAILABLE', 503);
+      for (const activeLocation of activeLocations) {
+       const locationId = asText(activeLocation.id);
+       const calculated = await cost(ctx, recipeId, locationId, tx, result.recipeVersionId);
+       if (calculated.status !== 'available') continue;
         const counts = await tx.query<Row>(`with recursive walk(version_id,path,depth) as (
           select $3::uuid,array[$3::uuid],1
           union all
@@ -118,11 +124,11 @@ export function createRecipeService(db: Database): RecipeService {
           group by c.ingredient_id
         )
         select b.ingredient_id,b.sequence,b.last_movement_id,b.quantity,b.value,b.reference_value,b.reference_quantity,o.occurrence_count
-        from occurrences o join core.stock_balances b on b.organization_id=$1 and b.restaurant_id=$2 and b.ingredient_id=o.ingredient_id
-        where b.sequence>0 and b.last_movement_id is not null for share of b`, [ctx.organizationId, ctx.restaurantId, result.recipeVersionId]);
+        from occurrences o join core.stock_balances b on b.organization_id=$1 and b.restaurant_id=$2 and b.location_id=$4 and b.ingredient_id=o.ingredient_id
+        where b.sequence>0 and b.last_movement_id is not null for share of b`, [ctx.organizationId, ctx.restaurantId, result.recipeVersionId, locationId]);
         for (const source of counts.rows) {
-          await tx.query(`insert into core.recipe_cost_snapshot_lines(organization_id,restaurant_id,validation_event_id,ingredient_id,sequence,last_movement_id,quantity,value,cost_numerator,cost_denominator,occurrence_count)
-            values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`, [ctx.organizationId, ctx.restaurantId, result.validationEventId, source.ingredient_id, source.sequence, source.last_movement_id, source.quantity, source.value, source.reference_value, source.reference_quantity, source.occurrence_count]);
+          await tx.query(`insert into core.recipe_cost_snapshot_lines(organization_id,restaurant_id,validation_event_id,location_id,ingredient_id,sequence,last_movement_id,quantity,value,cost_numerator,cost_denominator,occurrence_count)
+            values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`, [ctx.organizationId, ctx.restaurantId, result.validationEventId, locationId, source.ingredient_id, source.sequence, source.last_movement_id, source.quantity, source.value, source.reference_value, source.reference_quantity, source.occurrence_count]);
         }
       }
       await appendRecipeAudit(ctx, { action: 'recipe.measurement.validated', entityId: measurementId }, tx);
@@ -130,6 +136,6 @@ export function createRecipeService(db: Database): RecipeService {
     }),
     listRecipes: (actor, selection, token, query) => withAccess(actor, selection, token, (ctx, tx) => recipeRepository.listRecipes(ctx, query, tx)),
     getRecipe: (actor, selection, token, recipeId) => withAccess(actor, selection, token, (ctx, tx) => recipeRepository.getRecipe(ctx, recipeId, tx)),
-    getRecipeCost: (actor, selection, token, recipeId) => withAccess(actor, selection, token, (ctx, tx) => cost(ctx, recipeId, tx)),
+    getRecipeCost: (actor, selection, token, recipeId, locationId) => withAccess(actor, selection, token, (ctx, tx) => cost(ctx, recipeId, locationId, tx)),
   };
 }

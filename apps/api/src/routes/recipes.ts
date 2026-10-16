@@ -31,7 +31,7 @@ export function registerRecipes(app: FastifyInstance, s: ApiServices) {
     return reply.code(201).send(await service().validateYieldMeasurement(...await args(request), id(request, 'recipeId'), id(request, 'measurementId'), key(request)));
   });
   app.get(base + '/:recipeId/cost', async (request) => {
-    validate(RecipeCostQuerySchema, request.query);
-    return service().getRecipeCost(...await args(request), id(request, 'recipeId'));
+    const query = validate(RecipeCostQuerySchema, request.query);
+    return service().getRecipeCost(...await args(request), id(request, 'recipeId'), query.locationId);
   });
 }

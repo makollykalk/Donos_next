@@ -7,5 +7,5 @@ export async function assertReversible(ctx:RestaurantContext,m:MovementDTO,b:Sto
  if(m.kind==='REVERSAL'||b.lastMovementId!==m.id)throw new DomainError('REVERSAL_REQUIRES_REVALUATION',409);
 }
 export async function compensate(ctx:RestaurantContext,m:MovementDTO,b:StockBalance,reversalId:string,reason:string,key:string,tx:Tx){
- return postMovement(ctx,m.ingredientId,calculateEligibleReversal(b,m),{kind:'REVERSAL',reversalOfId:m.id,reversalId,reason,key},tx);
+ return postMovement(ctx,m.ingredientId,m.locationId,calculateEligibleReversal(b,m),{kind:'REVERSAL',reversalOfId:m.id,reversalId,reason,key},tx);
 }

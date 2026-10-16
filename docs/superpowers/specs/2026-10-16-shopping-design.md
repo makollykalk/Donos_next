@@ -1,6 +1,6 @@
 # Ciclo 06 — Listas de compras Premium do App 01
 
-**Status:** proposta completa para revisão humana; nenhuma implementação autorizada por este documento.
+**Status:** aprovada pelo fundador em 2026-10-16; implementação local do Ciclo 06 autorizada, sujeita aos gates do plano. Alvo remoto continua não autorizado até decisão específica.
 
 **Base:** DONOS Next V3 (DEC-001, DEC-002, DEC-008, DEC-010 a DEC-013), T-02, T-07, T-09, T-19, T-23 e T-24, `prompts/06-PREMIUM-COMPRAS.md`.
 

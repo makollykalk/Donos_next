@@ -71,6 +71,9 @@ importers:
       '@donos/domain-purchases':
         specifier: workspace:*
         version: link:../../packages/domain-purchases
+      '@donos/domain-recipes':
+        specifier: workspace:*
+        version: link:../../packages/domain-recipes
       '@fastify/cors':
         specifier: 11.3.1
         version: 11.3.1
@@ -226,6 +229,15 @@ importers:
       '@donos/db':
         specifier: workspace:*
         version: link:../db
+      '@donos/domain-inventory':
+        specifier: workspace:*
+        version: link:../domain-inventory
+
+  packages/domain-recipes:
+    dependencies:
+      '@donos/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       '@donos/domain-inventory':
         specifier: workspace:*
         version: link:../domain-inventory

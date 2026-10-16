@@ -37,6 +37,20 @@ export function calculateIssue(state:ValuationState,baseQuantity:string):Movemen
   const cost=roundHalfEven((x+outgoing)*rv,rq)-roundHalfEven(x*rv,rq);
   return result(state,{quantity:checkedQuantity(q-outgoing),value:checkedValue(v-cost),referenceQuantity:state.referenceQuantity,referenceValue:state.referenceValue,issuedQuantity:checkedQuantity(x+outgoing),sequence:nextSequence(seq)});
 }
+/** Reconciles a physical count using the current local average, requiring an explicit total only from zero stock. */
+export function calculateCountAdjustment(state:ValuationState,countedQuantity:string,positiveVarianceTotalValue?:string):MovementCalculation {
+  const current=decode(state),counted=quantityCoefficient(countedQuantity);
+  if(counted===current.q) throw new InventoryCalculationError('RESOURCE_CONFLICT');
+  if(counted<current.q) return calculateIssue(state,formatScaled(current.q-counted,QUANTITY_SCALE));
+  const delta=counted-current.q;
+  let incomingValue:bigint;
+  if(current.q===0n){
+    if(positiveVarianceTotalValue===undefined) throw new InventoryCalculationError('COUNT_VALUE_CONFIRMATION_REQUIRED');
+    incomingValue=valueCoefficient(positiveVarianceTotalValue);
+  } else incomingValue=roundHalfEven(delta*current.rv,current.rq);
+  const afterQuantity=checkedQuantity(counted),afterValue=checkedValue(current.v+incomingValue);
+  return result(state,{quantity:afterQuantity,value:afterValue,referenceQuantity:afterQuantity,referenceValue:afterValue,issuedQuantity:'0',sequence:nextSequence(current.seq)});
+}
 export function calculateEligibleReversal(state:ValuationState,original:MovementSnapshot):MovementCalculation {
   const current=decode(state);decode(original.before);decode(original.after);
   const fields=['quantity','value','referenceQuantity','referenceValue','issuedQuantity','sequence'] as const;

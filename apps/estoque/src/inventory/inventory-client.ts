@@ -1,4 +1,5 @@
 import type {ApiClient,ProtectedContentProps} from '@donos/auth-client';
+import type {StockLocation} from '@donos/contracts';
 import {StaleContextError} from '@donos/auth-client';
 export function createInventoryClient({api,store,selection}:ProtectedContentProps){
  const generation=store.snapshot().generation;
@@ -6,6 +7,7 @@ export function createInventoryClient({api,store,selection}:ProtectedContentProp
  const assert=()=>{store.assertCurrent(generation);if(store.snapshot().selection?.token!==selection.token)throw new StaleContextError();};
  return {
   read:<T>(path:string)=>{assert();return store.read(()=>api<T>(base+path,{contextToken:selection.token}));},
+  listLocations:()=>{assert();return store.read(()=>api<{items:StockLocation[]}>(base+'/locations',{contextToken:selection.token}));},
   write:async<T>(path:string,body:unknown,key:string,method='POST')=>{assert();const result=await store.submit(generation,()=>api<T>(base+path,{method,body,contextToken:selection.token,idempotencyKey:key}));assert();return result;},
   assert,
  };

@@ -1,9 +1,21 @@
 import { describe,expect,it } from 'vitest';
 import type { MovementSnapshot,ValuationState } from '@donos/contracts';
-import { calculateEligibleReversal,calculateIssue,calculateReceipt } from '../../packages/domain-inventory/src/valuation.js';
+import { calculateEligibleReversal,calculateIssue,calculateReceipt,calculateCountAdjustment } from '../../packages/domain-inventory/src/valuation.js';
 import { parseScaled } from '../../packages/domain-inventory/src/decimal.js';
 const empty:ValuationState={quantity:'0',value:'0',referenceQuantity:'0',referenceValue:'0',issuedQuantity:'0',sequence:'0'};
 describe('moving average with a cumulative quantized allocation',()=>{
+  it('values count adjustments at the local average and requires an explicit value from zero stock',()=>{
+    const stocked=calculateReceipt(empty,'10','200').after;
+    const negative=calculateCountAdjustment(stocked,'8');
+    expect(negative.after.quantity).toBe('8');expect(negative.after.value).toBe('160');
+    const positive=calculateCountAdjustment(negative.after,'15');
+    expect(positive.after.quantity).toBe('15');expect(positive.after.value).toBe('300');
+    expect(positive.averageCostRatio).toEqual({numerator:'300',denominator:'15'});
+    expect(()=>calculateCountAdjustment(empty,'2')).toThrowError('COUNT_VALUE_CONFIRMATION_REQUIRED');
+    const valued=calculateCountAdjustment(empty,'2','17.5');
+    expect(valued.after).toMatchObject({quantity:'2',value:'17.5',referenceQuantity:'2',referenceValue:'17.5'});
+    expect(calculateCountAdjustment(stocked,'11').after).toMatchObject({quantity:'11',value:'220'});
+  });
   it('satisfies the canonical remaining stock example',()=>{
     const a=calculateReceipt(empty,'10','200');
     const b=calculateIssue(a.after,'2');
@@ -36,7 +48,7 @@ describe('moving average with a cumulative quantized allocation',()=>{
   it('restores the full prior cumulative state while advancing sequence',()=>{
     const start=calculateReceipt(empty,'3','1').after;
     const issue=calculateIssue(start,'1');
-    const original:MovementSnapshot={id:'movement',sequence:'2',kind:'ISSUE',ingredientId:'ingredient',before:start,after:issue.after,origin:'manual'};
+    const original:MovementSnapshot={id:'movement',sequence:'2',kind:'ISSUE',ingredientId:'ingredient',locationId:'location',before:start,after:issue.after,origin:'manual'};
     const reverse=calculateEligibleReversal(issue.after,original);
     expect(reverse.after).toEqual({...start,sequence:'3'});
     expect(reverse.quantityDelta).toBe('1');expect(reverse.valueDelta).toBe('0.333333333333');
@@ -68,9 +80,9 @@ describe('moving average with a cumulative quantized allocation',()=>{
   it('reverses exhaustion and receipts using complete snapshots with monotonic sequence',()=>{
     const receipt=calculateReceipt(empty,'3','1');
     const issue=calculateIssue(receipt.after,'3');
-    const original:MovementSnapshot={id:'issue',sequence:'2',kind:'ISSUE',ingredientId:'ingredient',before:receipt.after,after:issue.after,origin:null};
+    const original:MovementSnapshot={id:'issue',sequence:'2',kind:'ISSUE',ingredientId:'ingredient',locationId:'location',before:receipt.after,after:issue.after,origin:null};
     expect(calculateEligibleReversal(issue.after,original).after).toEqual({...receipt.after,sequence:'3'});
-    const first:MovementSnapshot={id:'receipt',sequence:'1',kind:'RECEIPT',ingredientId:'ingredient',before:empty,after:receipt.after,origin:'receipt-item'};
+    const first:MovementSnapshot={id:'receipt',sequence:'1',kind:'RECEIPT',ingredientId:'ingredient',locationId:'location',before:empty,after:receipt.after,origin:'receipt-item'};
     expect(calculateEligibleReversal(receipt.after,first).after).toEqual({...empty,sequence:'2'});
     expect(()=>calculateEligibleReversal({...receipt.after,value:'2'},first)).toThrowError('RESOURCE_CONFLICT');
   });

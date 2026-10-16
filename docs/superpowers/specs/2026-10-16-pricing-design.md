@@ -19,11 +19,11 @@ O App 02 continua independente do estoque e das compras. Não cria, altera nem c
 ## Escopo funcional
 
 - Produtos vendáveis, variações e combos pertencem a uma organização e unidade; dono pode criar/editar/arquivar e consultar seus próprios registros.
-- Custo do produto vem de uma única fonte selecionada explicitamente: `manual` ou `recipe`. Fonte manual guarda valor, moeda e data da edição. Fonte de ficha guarda apenas o vínculo `recipeId`, local e quantidade por venda; cada simulação consulta a versão corrente validada no serviço central e grava versão, fonte, data e breakdown exatos no próprio snapshot. Nunca converter custo indisponível em zero.
+- Custo do produto vem de uma única fonte selecionada explicitamente: `manual` ou `recipe`. Fonte manual guarda valor, moeda e data da edição. Fonte de ficha guarda apenas o vínculo `recipeId`, local e quantidade por venda; cada simulação consulta a versão corrente validada no serviço central e grava versão, fonte, local, quantidade por venda, data e breakdown exatos no próprio snapshot. Nunca converter custo indisponível em zero.
 - Acesso ao App 02 exige `pricing_core`. Fonte `recipe` também exige `inventory_core` da mesma organização. Sem App 01, custo manual continua disponível e o App 02 permanece funcional.
 - Cada perfil de canal registra taxas percentuais e valores fixos, tributos informados pelo dono, descontos e embalagem com sua unidade de incidência declarada. As metas de margem de contribuição e CMV são configuráveis por produto/variação e canal.
 - Simulação mostra custo-base, bases de incidência, taxas, preço atual, preço sugerido, CMV projetado e margem de contribuição projetada separadamente. Metas inválidas/incompatíveis e entradas fora do domínio geram erro/alerta explícito; nenhum resultado silencioso.
-- Combo soma custos dos componentes nas quantidades selecionadas e custo exclusivo do combo. Embalagens e taxas devem ser contabilizadas uma vez segundo a regra aprovada para o componente e o canal.
+- Combo soma custos dos componentes nas quantidades selecionadas e custo exclusivo do combo. A quantidade da ficha escala ingredientes e embalagens da ficha; embalagem cadastrada no App 02 é custo por venda e não é multiplicada por `quantityPerSale`. Embalagens exclusivas do combo e taxas por venda são contabilizadas uma vez.
 - Simulações são append-only: guardam valores de entrada e resultado usados naquele instante. Para combo, o snapshot contém uma entrada por variante selecionada com quantidade, fonte e custo exatos, breakdown de componentes, custo variável e caminhos de embalagem substituídos. Alterar preço, custo, produto, combo ou canal não reescreve simulações antigas.
 
 ## Modelo matemático e precisão
@@ -49,6 +49,10 @@ O App 02 continua independente do estoque e das compras. Não cria, altera nem c
 ## Combos e embalagens
 
 - Cada componente preserva quantidade e custo-fonte usados no snapshot. Embalagem já incluída na ficha/custo do produto não pode ser somada novamente como embalagem individual do App 02.
+- O cadastro do combo mantém seu preço atual de venda para exibir as métricas atuais. A simulação congela esse preço com a composição vigente; editar depois o preço ou componentes não altera o histórico.
+- Toda simulação congela os dados comerciais e de custo da variação usados no cálculo: nome, preço de lista, vínculo/custo-fonte resolvido, quantidade por venda da ficha, embalagens e outros custos variáveis. Em combos, cada componente congela esses mesmos valores, a quantidade e os caminhos de embalagem substituídos. Alterações posteriores no catálogo nunca reescrevem snapshots anteriores.
+- A leitura de combo, componentes, canal, taxas e variações durante uma simulação deve ser consistente sob edições concorrentes. A simulação mantém locks compartilhados nos registros-pai lidos; qualquer edição de catálogo bloqueia/atualiza primeiro o mesmo registro-pai antes de alterar dados-filhos. A consulta da ficha conserva sua transação/versionamento próprios, e seu `recipeVersionId`, local, quantidade e breakdown exatos são congelados no snapshot comercial.
+- Consultar detalhes do catálogo de preço depende apenas de `pricing_core`; resolver custo ou caminhos de embalagem de ficha depende de `inventory_core`. Sem esse entitlement, o dono ainda pode ler o vínculo da ficha e usar o restante do catálogo manual, com os caminhos de embalagem da ficha indicados como indisponíveis.
 - Embalagem individual consumida permanece no custo daquele componente. Uma substituição explícita só remove o componente de embalagem efetivamente substituído; outros custos de embalagem continuam. Embalagem exclusiva de combo é adicionada uma vez.
 - Taxa percentual e taxa fixa identificam sua base e unidade de aplicação. O cenário de uma venda de combo aplica a taxa por venda uma única vez, sem somar novamente uma taxa embutida no custo do produto. A semântica de comissão por pedido com vários itens exige regra própria e não pode ser inferida neste ciclo.
 
@@ -77,8 +81,11 @@ Qualquer decisão técnica nova deve ser registrada em `docs/05-REGISTRO-DE-DECI
 - **T-16:** custo atual de ficha entra apenas por serviço/API central e organização/unidade/local autorizados, com versão, fonte e data; faltante/não validado/API indisponível permanece explícito e não vira zero.
 - **T-17:** casos de margem, CMV e metas simultâneas cumprem fórmulas válidas, rejeitam denominador/CMV inválidos, respeitam IMP-016, arredondam preço para cima ao centavo e recalculam métricas.
 - **T-18:** combo soma componentes sem duplicar embalagem ou taxa, segundo IMP-017 aprovado.
+- Histórico de simulação reproduz integralmente os dados de variação, fonte e custos usados, mesmo após edição do catálogo.
 - Integração testa idempotência, permissão, histórico imutável, cross-tenant e cross-unit. Unitários cobrem aritmética e fronteiras; E2E cobre o caminho principal manual e combo.
 
 ## Gate desta proposta
 
 Desenho, plano TDD e decisões IMP-016/017 foram aprovados para implementação. DDL/integração requer alvo descartável local comprovado ou autorização específica para o DEV DONOS Next deste ciclo.
+
+Em 16/10/2026 o fundador também aprovou congelar no histórico o preço de lista, fonte/custo exato, embalagens e outros custos variáveis de cada variação usada (inclusive cada componente de combo), e decidiu cadastrar o preço atual do combo no próprio combo. A implementação acrescenta `variantSnapshot` ao contrato/snapshot persistido e `listPrice` ao cadastro/snapshot de combo.

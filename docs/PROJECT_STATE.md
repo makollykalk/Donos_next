@@ -4,10 +4,12 @@ Atualizado em 2026-10-16.
 
 ## Ciclo atual
 
-- **Ciclo 05 — App 02 Precificação de Produtos e Combos:** spec/plano TDD e decisões financeiras aprovados. Task 1 (contratos e cálculo exato) concluída no commit `480a65f`; Task 2 (decomposição exata do custo da ficha) concluída no commit `c4872f1`; Task 3 (schema/repository/isolamento/histórico) implementada e validada no checkout atual. API, UI e E2E ainda não iniciadas.
+- **Ciclo 05 — App 02 Precificação de Produtos e Combos:** implementação de contratos, cálculo, persistência, API, UI, combos, snapshots históricos e integração de fichas concluída e commitada na branch `codex/ciclo-05-pricing`; gates finais e revisão independente executados em 2026-10-16. PR pendente; não houve merge, deploy ou início do Ciclo 06.
 - Ver [spec aprovada](superpowers/specs/2026-10-16-pricing-design.md), [plano TDD aprovado](superpowers/plans/2026-10-16-pricing.md) e [ADR 0004 aprovada](adr/0004-pricing-incidence-and-combos.md). IMP-016/017 e o vínculo atual da ficha foram aprovados em 2026-10-16. O fundador autorizou testes e migrations aditivas do Ciclo 05 somente no DEV `kfthwjrvgslnsjigqnyc`; sem reset, produção ou legado.
 - Escopo do prompt: produtos/variações/combos, custo manual ou custo de ficha autorizado, perfis de canal, simulações e snapshots históricos; T-15 a T-18.
-- Migration `20261016144858_cycle05_pricing` aplicada somente ao DEV autorizado `kfthwjrvgslnsjigqnyc`. Integrações direcionadas de schema, segurança multi-tenant e histórico combo passaram 3/3; `pnpm test:unit` passou 160/160. Typecheck, lint e diff check passaram; Node 24.19.0 emite aviso por estar abaixo do mínimo `>=24.22.0 <25`.
+- Migrations aditivas `20261016144858_cycle05_pricing` e `20261016150625_cycle05_pricing_variant_snapshot.sql` aplicadas somente ao DEV autorizado `kfthwjrvgslnsjigqnyc`; o histórico remoto confirmou a migration de snapshot. Nenhum reset foi executado.
+- Verificação final: `pnpm test:unit` 169/169; integração de pricing em 5 arquivos/6 testes passou (API, histórico, tenant/security, schema e locks concorrentes); E2E de combo 1/1, `pnpm typecheck`, `pnpm lint`, `pnpm build` e `git diff --check` passaram. Consulte [evidências do Ciclo 05](evidence/ciclo-05-pricing.md).
+- Revisão independente final sem blockers. Risco residual P2: a coerência concorrente depende de as escritas usarem os métodos do repositório, que atualizam primeiro o registro-pai; DML direto nas tabelas-filhas não adquire esse lock automaticamente.
 
 ## Ciclo anterior e estado Git
 

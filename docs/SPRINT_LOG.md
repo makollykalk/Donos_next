@@ -12,13 +12,16 @@
 
 ## Ciclo 05 — App 02 Precificação de Produtos e Combos
 
-- **Estado:** decisões e plano aprovados na branch `codex/ciclo-05-pricing`. Task 1 foi commitada em `480a65f`; Task 2, em `c4872f1`, revisada independentemente e validada por unidade. Task 3 foi implementada no checkout atual, revisada independentemente e validada no DEV autorizado `kfthwjrvgslnsjigqnyc`; a migration foi aditiva e não houve reset.
+- **Estado:** implementação commitada na branch `codex/ciclo-05-pricing`; gates finais e revisão independente concluídos em 2026-10-16. PR pendente; não houve merge, deploy ou início de novo ciclo.
 - **Prompt:** `prompts/05-PRECIFICACAO.md`; critérios T-15 a T-18 e decisões pendentes IMP-016/IMP-017.
 - **Spec:** `docs/superpowers/specs/2026-10-16-pricing-design.md`; aprovada pelo fundador em 2026-10-16.
 - **Plano TDD:** `docs/superpowers/plans/2026-10-16-pricing.md`; aprovado pelo fundador em 2026-10-16.
 - **Decisões financeiras:** fundador confirmou IMP-016/017 e vínculo à versão corrente validada/local escolhido em 2026-10-16; ADR `docs/adr/0004-pricing-incidence-and-combos.md` aprovada.
-- **Gate de banco:** autorização C05-DEV registrada em `docs/DECISIONS.md`; `.local/dev.json` confirmou o projeto `kfthwjrvgslnsjigqnyc`. Migration `20261016144858_cycle05_pricing` aplicada sem reset; histórico remoto confirmou a versão registrada.
-- **Verificação Task 3:** `pricing-schema.test.ts`, `pricing-tenant-security.test.ts` e `pricing-history-snapshot.test.ts` passaram 3/3 no DEV com fixtures sintéticas; `pnpm test:unit` passou 160/160; typecheck, lint e `git diff --check` passaram. Node 24.19.0 abaixo do requisito `>=24.22.0 <25`, com aviso do package manager.
+- **Gate de banco:** autorização C05-DEV registrada em `docs/DECISIONS.md`; `.local/dev.json` confirmou o projeto `kfthwjrvgslnsjigqnyc`. Migrations aditivas `20261016144858_cycle05_pricing` e `20261016150625_cycle05_pricing_variant_snapshot.sql` aplicadas sem reset; o histórico remoto confirmou a migration de snapshot.
+- **Verificação:** `pnpm test:unit` 169/169; integração de pricing em 5 arquivos/6 testes passou no DEV com dados sintéticos (API, schema, tenant/security, histórico e locks); E2E de combo 1/1; typecheck, lint, build e diff check passaram. O teste relacionado ao contrato central de ficha também foi executado separadamente; evidências em `docs/evidence/ciclo-05-pricing.md`.
+- **Revisão independente:** sem blockers em isolamento, exatidão financeira, snapshots, locks e acesso de catálogo recipe. Risco P2: DML direto nas tabelas-filhas fora dos métodos de repositório não adquire o lock do registro-pai automaticamente.
+- **Commits de implementação:** `a3546b8` snapshots/migration, `4c83e3c` API/cálculo/concorrência, `1eea03c` UI/E2E.
+- **Ambiente:** Node 24.19.0 abaixo do requisito `>=24.22.0 <25`; build runtime 24.15.0. Os comandos passaram com avisos de engine; bundle do App 02 ultrapassa 500 kB minificados.
 - **Advisors após migration:** sem advisory de segurança nas novas tabelas; permanece `auth_leaked_password_protection` WARN preexistente. Há avisos INFO de FKs sem índice (incluindo algumas novas FKs de autoria/local) e índices recém-criados ainda não usados.
 - **Limites:** autorização remota limitada a testes e migrations aditivas no DEV acima. Sem produção, legado, reset, cobrança real, integração paga ou deploy.
 

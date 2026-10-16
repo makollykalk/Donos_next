@@ -1,6 +1,6 @@
 # Ciclo 04 — locais de estoque e auditoria física
 
-**Status:** desenho aprovado pelo fundador em 2026-10-15 para registro nesta spec; a spec ainda aguarda revisão. Nenhuma implementação está autorizada por este documento.
+**Status:** desenho e spec aprovados pelo fundador em 2026-10-15; Ciclo 04 implementado e verificado no DEV autorizado. Evidências finais: `docs/evidence/ciclo-04-stock-locations-audit.md`.
 
 **Base funcional:** DONOS Next V3, DEC-001, DEC-005, DEC-007, DEC-010, DEC-011, DEC-012 e DEC-013; critérios T-13, T-14 e T-24; Prompt `prompts/04-AUDITORIA.md`.
 
@@ -89,4 +89,4 @@ Restrições compostas impedem cruzar organização, unidade, local e insumo. Ta
 
 ## Gate de processo
 
-Esta spec registra o design aprovado e aguarda revisão humana do texto. Após aprovação, será escrito um plano TDD separado com interfaces, arquivos exatos, testes, commits e gates; esse plano também exige revisão antes da implementação. O coordenador mantém contracts, migrations, transações e integração. Agentes só podem atuar em tarefas paralelas com arquivos e banco mutável disjuntos. A implementação do Ciclo 04 não começa automaticamente.
+Esta spec e o desenho foram aprovados pelo fundador em 2026-10-15. O plano TDD foi aprovado antes da implementação. A implementação e a integração no Supabase DEV autorizado foram concluídas; produção e legado não foram alterados. Evidências e limitações estão em `docs/evidence/ciclo-04-stock-locations-audit.md`. O branch aguarda revisão humana antes de merge ou início de outro ciclo.

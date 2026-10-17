@@ -121,9 +121,9 @@ export function createAiTextService(db: Database, extractor?: TextExtractor): Ai
         await requireEntitlement(ctx, 'ai_text_whatsapp', tx);
         const validated = validateInventoryCandidate(candidate, await loadCatalog(ctx, tx), { locationId: cleanInput.locationId });
         await settleUsage(ctx, reservationId!, '1', tx);
-        const saved = await aiProposalRepository.updateReview(ctx, proposalId!, 1, {
+        const saved = await aiProposalRepository.finalizeInterpretation(ctx, proposalId!, 1, {
           status: validated.status, candidate: validated.candidate,
-          review: { action: validated.action, ingredientId: validated.ingredientId, unitPrice: validated.unitPrice, missingFields: validated.missingFields },
+          review: { action: validated.action, ingredientId: validated.ingredientId, unitPrice: validated.unitPrice, unitPriceOverride: null, missingFields: validated.missingFields },
         }, tx);
         return dto(saved);
       });
@@ -151,7 +151,7 @@ export function createAiTextService(db: Database, extractor?: TextExtractor): Ai
       return executeIdempotent({ kind: 'organization', context: ctx }, 'ai.text.proposal.update', key,
         { organizationId: ctx.organizationId, restaurantId: ctx.restaurantId, contextHash, locationId: previous.locationId, proposalId: id, input: parsed.data }, tx, async () => {
         const review = parsed.data;
-        const priorReview = previous.review as { action?: AiTextCandidate['action']; ingredientId?: string; supplierId?: string; quantity?: string; unit?: AiTextCandidate['unit']; unitPrice?: string; reason?: string };
+        const priorReview = previous.review as { action?: AiTextCandidate['action']; ingredientId?: string; supplierId?: string; quantity?: string; unit?: AiTextCandidate['unit']; unitPrice?: string; unitPriceOverride?: string | null; reason?: string };
         const location = await tx.query('select id from core.stock_locations where organization_id=$1 and restaurant_id=$2 and id=$3 and not archived', [ctx.organizationId, ctx.restaurantId, previous.locationId]);
         if (!location.rowCount) throw new DomainError('RESOURCE_NOT_FOUND', 404);
         const catalog = await loadCatalog(ctx, tx);
@@ -168,7 +168,8 @@ export function createAiTextService(db: Database, extractor?: TextExtractor): Ai
         const unit = scalarUnit(review.unit) ?? priorReview.unit ?? previous.candidate?.unit ?? null;
         const action = review.action ?? priorReview.action ?? previous.candidate?.action ?? null;
         const quantity = review.quantity ?? priorReview.quantity ?? previous.candidate?.quantity ?? null;
-        const unitPrice = review.unitPrice ?? priorReview.unitPrice ?? previous.candidate?.unitPrice ?? null;
+        const unitPriceOverride = review.unitPrice ?? priorReview.unitPriceOverride ?? null;
+        const unitPrice = unitPriceOverride ?? (previous.candidate?.totalPrice ? null : previous.candidate?.unitPrice ?? null);
         const reason = review.reason ?? priorReview.reason ?? previous.candidate?.reason ?? null;
         const resolvedAmbiguity = Boolean(action && ingredient && quantity && unit &&
           (action === 'receipt' ? (unitPrice || previous.candidate?.totalPrice) : reason));
@@ -181,8 +182,8 @@ export function createAiTextService(db: Database, extractor?: TextExtractor): Ai
         const validationCatalog = ingredient ? [ingredient] : catalog;
         const validated = validateInventoryCandidate(candidate, validationCatalog, { locationId: previous.locationId, ...(supplierId ? { supplierId } : {}) });
         return dto(await aiProposalRepository.updateReview(ctx, id, review.expectedVersion, {
-          status: validated.status, candidate: validated.candidate,
-          review: { action: validated.action, ingredientId: validated.ingredientId, ...(supplierId ? { supplierId } : {}), quantity, unit, unitPrice: validated.unitPrice, reason, missingFields: validated.missingFields },
+          status: validated.status, candidate: { ...validated.candidate, unitPrice: validated.unitPrice },
+          review: { action: validated.action, ingredientId: validated.ingredientId, ...(supplierId ? { supplierId } : {}), quantity, unit, unitPrice: validated.unitPrice, unitPriceOverride, reason, missingFields: validated.missingFields },
         }, tx));
       });
     });

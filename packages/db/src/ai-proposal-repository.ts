@@ -93,7 +93,20 @@ export const aiProposalRepository = {
     const result = await tx.query<ProposalRow>(
       `update core.ai_text_proposals set status=$4,candidate_json=$5::jsonb,review_json=$6::jsonb
        where organization_id=$1 and restaurant_id=$2 and id=$3 and version=$7
-         and status in ('interpreting','needs_review','ready') and expires_at>statement_timestamp()
+         and status in ('needs_review','ready') and expires_at>statement_timestamp()
+       returning ${columns}`,
+      [ctx.organizationId, ctx.restaurantId, id, input.status, JSON.stringify(input.candidate), JSON.stringify(input.review), expectedVersion],
+    );
+    const row = result.rows[0];
+    if (!row) throw new DomainError('RESOURCE_CONFLICT', 409);
+    return record(row);
+  },
+
+  async finalizeInterpretation(ctx: RestaurantContext, id: string, expectedVersion: number, input: UpdateAiTextProposalReview, tx: Tx): Promise<AiTextProposalRecord> {
+    const result = await tx.query<ProposalRow>(
+      `update core.ai_text_proposals set status=$4,candidate_json=$5::jsonb,review_json=$6::jsonb
+       where organization_id=$1 and restaurant_id=$2 and id=$3 and version=$7
+         and status='interpreting' and expires_at>statement_timestamp()
        returning ${columns}`,
       [ctx.organizationId, ctx.restaurantId, id, input.status, JSON.stringify(input.candidate), JSON.stringify(input.review), expectedVersion],
     );

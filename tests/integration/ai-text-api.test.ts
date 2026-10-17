@@ -87,7 +87,7 @@ function lifecycleDb(options: { failDispatch?: boolean; catalogSize?: number } =
       if (proposedStatus !== 'interpreting' && !values[8]) throw new Error('check constraint status_requires_candidate');
       proposal = { id: proposalId, organization_id: orgId, restaurant_id: restaurantId, location_id: locationId,
         actor_user_id: actor.userId, operation_key: values[4], request_hash: values[5], usage_reservation_id: reservationId,
-        status: values[7], version: 1, candidate_json: values[8], review_json: JSON.parse(values[9] as string),
+        status: values[7], version: 1, candidate_json: values[8] ? JSON.parse(values[8] as string) : null, review_json: JSON.parse(values[9] as string),
         result_id: null, receipt_result_id: null, movement_result_id: null, created_at: new Date(), updated_at: new Date(),
         terminal_at: null, expires_at: new Date(Date.now() + 86400000).toISOString() };
       return { rows: [{ ...proposal }], rowCount: 1 };
@@ -102,9 +102,15 @@ function lifecycleDb(options: { failDispatch?: boolean; catalogSize?: number } =
       proposal.status = 'discarded'; proposal.version++; proposal.terminal_at = new Date(); proposal.expires_at = new Date(Date.now() + 30 * 86400000).toISOString();
       return { rows: [{ ...proposal }], rowCount: 1 };
     }
+    if (sql.includes('update core.ai_text_proposals set status=$4') && sql.includes("and status='interpreting'")) {
+      if (!proposal || proposal.status !== 'interpreting' || proposal.version !== values[6]) return { rows: [], rowCount: 0 };
+      if (!values[4]) throw new Error('check constraint status_requires_candidate');
+      proposal.status = values[3]; proposal.candidate_json = JSON.parse(values[4] as string); proposal.review_json = JSON.parse(values[5] as string); proposal.version++;
+      return { rows: [{ ...proposal }], rowCount: 1 };
+    }
     if (sql.includes('update core.ai_text_proposals set status=$4')) {
-      if (!sql.includes("status in ('interpreting','needs_review','ready')")) throw new Error('adapter requires interpreting review-state predicate');
-      if (!['interpreting', 'needs_review', 'ready'].includes(String(proposal?.status))) return { rows: [], rowCount: 0 };
+      if (!sql.includes("status in ('needs_review','ready')")) throw new Error('adapter requires reviewable-state predicate');
+      if (!['needs_review', 'ready'].includes(String(proposal?.status))) return { rows: [], rowCount: 0 };
       if (!values[4]) throw new Error('check constraint status_requires_candidate');
       if (!proposal || proposal.version !== values[6]) return { rows: [], rowCount: 0 };
       proposal.status = values[3]; proposal.candidate_json = JSON.parse(values[4] as string); proposal.review_json = JSON.parse(values[5] as string); proposal.version++;
@@ -282,6 +288,61 @@ it('rejects package input units until a conversion snapshot can be represented s
   await expect(service.updateProposal(args, proposal.id, {
     expectedVersion: proposal.version, unit: { kind: 'package', conversionId: randomUUID() },
   }, randomUUID())).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+});
+
+it('recalculates a derived unit price when quantity changes and preserves total price', async () => {
+  const fake = lifecycleDb();
+  const service = createAiTextService(fake.database, async () => ({
+    action: 'receipt', ingredientDescription: 'muçarela', quantity: '5', unit: 'kg',
+    totalPrice: '190', unitPrice: null, reason: null, ambiguous: false, explanations: [],
+  }));
+  const args = { actor: actor as any, selection, contextToken };
+  const proposal = await service.createProposal(args, { locationId, text: 'Entrada 5 kg por R$190' }, randomUUID(), 'request-price') as any;
+  const updated = await service.updateProposal(args, proposal.id, {
+    expectedVersion: proposal.version, quantity: '10', supplierId: fake.supplierId,
+  }, randomUUID()) as any;
+  expect(updated.status).toBe('ready');
+  expect(updated.candidate.totalPrice).toBe('190');
+  expect(updated.candidate.unitPrice).toBe('19');
+  const overridden = await service.updateProposal(args, proposal.id, {
+    expectedVersion: updated.version, unitPrice: '20',
+  }, randomUUID()) as any;
+  const quantityChanged = await service.updateProposal(args, proposal.id, {
+    expectedVersion: overridden.version, quantity: '20',
+  }, randomUUID()) as any;
+  expect(quantityChanged.candidate.totalPrice).toBe('190');
+  expect(quantityChanged.candidate.unitPrice).toBe('20');
+});
+
+it('rejects public edits during extraction and completes the reserved proposal after extraction resolves', async () => {
+  const fake = lifecycleDb();
+  let extractionStarted!: () => void;
+  let resolveExtraction!: (value: unknown) => void;
+  const started = new Promise<void>(resolve => { extractionStarted = resolve; });
+  const extractionResult = new Promise<unknown>(resolve => { resolveExtraction = resolve; });
+  const service = createAiTextService(fake.database, async () => {
+    extractionStarted();
+    return extractionResult;
+  });
+  const args = { actor: actor as any, selection, contextToken };
+  const key = randomUUID();
+  const creation = service.createProposal(args, { locationId, text: 'Entrada 5 kg por R$190' }, key, 'request-race');
+  await started;
+  const duplicate = await service.createProposal(args, { locationId, text: 'Entrada 5 kg por R$190' }, key, 'request-race-retry') as any;
+  expect(duplicate.status).toBe('interpreting');
+  await expect(service.updateProposal(args, duplicate.id, {
+    expectedVersion: duplicate.version, action: 'receipt', ingredientId: fake.catalogItems[0]!.id,
+    quantity: '5', unit: { kind: 'standard', code: 'kg' }, unitPrice: '38', supplierId: fake.supplierId,
+  }, randomUUID())).rejects.toMatchObject({ code: 'RESOURCE_CONFLICT' });
+  resolveExtraction({
+    action: 'receipt', ingredientDescription: 'muçarela', quantity: '5', unit: 'kg',
+    totalPrice: '190', unitPrice: null, reason: null, ambiguous: false, explanations: [],
+  });
+  const completed = await creation as any;
+  expect(completed.id).toBe(duplicate.id);
+  expect(completed.status).toBe('needs_review');
+  expect(fake.proposal?.version).toBe(2);
+  expect(fake.reservation.status).toBe('settled');
 });
 
 it('keeps discard idempotency scoped to its proposal context and location', async () => {

@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { ContextSelectionSchema, UUIDSchema, AiTextRequestSchema, AiTextProposalReviewSchema } from '@donos/contracts';
+import { ContextSelectionSchema, UUIDSchema, AiTextRequestSchema, AiTextProposalReviewSchema, AiTextProposalConfirmSchema } from '@donos/contracts';
 import { DomainError } from '@donos/db';
 import type { ApiServices } from '../http/security.js';
 import { validate } from '../http/security.js';
@@ -27,4 +27,7 @@ export function registerAiText(app: FastifyInstance, services: ApiServices) {
     await args(request), id(request), validate(AiTextProposalReviewSchema, request.body), key(request),
   ));
   app.post(base + '/:proposalId/discard', async request => service().discardProposal(await args(request), id(request), key(request)));
+  app.post(base + '/:proposalId/confirm', async request => service().confirmProposal(
+    await args(request), id(request), validate(AiTextProposalConfirmSchema, request.body), key(request),
+  ));
 }

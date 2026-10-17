@@ -1,14 +1,17 @@
-import { AiTextCandidateSchema, AiTextProposalReviewSchema, AiTextRequestSchema, UUIDSchema } from '@donos/contracts';
+import { AiTextCandidateSchema, AiTextProposalConfirmSchema, AiTextProposalReviewSchema, AiTextRequestSchema, UUIDSchema } from '@donos/contracts';
 import type { AiTextCandidate, ContextSelection } from '@donos/contracts';
 import {
   DomainError, aiProposalRepository, canonicalHash, executeIdempotent,
 } from '@donos/db';
 import type { Database, RestaurantContext, Tx, VerifiedActor } from '@donos/db';
 import { inventoryCatalog } from '@donos/db';
+import { appendInventoryAudit } from '@donos/db';
 import { markUsageDispatched, markUsageUnknown, releaseUsage, reserveUsage, requireEntitlement, settleUsage } from '@donos/domain-billing';
 import { validateInventoryCandidate } from '@donos/domain-ai';
 import type { InventoryCatalogEntry } from '@donos/domain-ai';
-import type { AiTextArgs, AiTextService, CreateTextProposalInput, TextExtractor, UpdateTextProposalInput } from './ai-text-types.js';
+import { draftReceipt, receiveReceipt } from '@donos/domain-purchases';
+import { InventoryCalculationError, issueStock } from '@donos/domain-inventory';
+import type { AiTextArgs, AiTextConfirmationOperations, AiTextService, ConfirmTextProposalInput, CreateTextProposalInput, TextExtractor, UpdateTextProposalInput } from './ai-text-types.js';
 
 type ProposalRecord = Awaited<ReturnType<typeof aiProposalRepository.get>>;
 type ApiArgs = AiTextArgs;
@@ -68,7 +71,11 @@ async function proposalByKey(ctx: RestaurantContext, key: string, tx: Tx): Promi
   return aiProposalRepository.get(ctx, found.rows[0].id, tx);
 }
 
-export function createAiTextService(db: Database, extractor?: TextExtractor): AiTextService {
+export function createAiTextService(db: Database, extractor?: TextExtractor, overrides?: AiTextConfirmationOperations): AiTextService {
+  const confirmationOps: AiTextConfirmationOperations = overrides ?? {
+    draftReceipt, receiveReceipt, issueStock,
+    settleUsage,
+  };
   async function createProposal(rawArgs: AiTextArgs, input: CreateTextProposalInput, key: string, requestId = rawArgs.actor.requestId) {
     const args = context(rawArgs.actor, rawArgs.selection, rawArgs.contextToken);
     if (!extractor) throw new DomainError('DEPENDENCY_UNAVAILABLE', 503);
@@ -204,5 +211,73 @@ export function createAiTextService(db: Database, extractor?: TextExtractor): Ai
     });
   }
 
-  return { createProposal, getProposal, updateProposal, discardProposal };
+  async function confirmProposal(rawArgs: AiTextArgs, id: string, input: ConfirmTextProposalInput, key: string) {
+    const args = context(rawArgs.actor, rawArgs.selection, rawArgs.contextToken);
+    const parsed = AiTextProposalConfirmSchema.safeParse(input);
+    if (!UUIDSchema.safeParse(id).success || !UUIDSchema.safeParse(key).success || !parsed.success) {
+      throw new DomainError('VALIDATION_ERROR', 400);
+    }
+    const confirmation = parsed.data;
+    return inContext(db, args, async (ctx, tx) => {
+      await requireEntitlement(ctx, 'ai_text_whatsapp', tx);
+      const initial = await aiProposalRepository.get(ctx, id, tx);
+      if (initial.actorUserId !== ctx.actor.userId) throw new DomainError('RESOURCE_NOT_FOUND', 404);
+      const supplierId = confirmation.supplierId ?? (initial.review as { supplierId?: string }).supplierId;
+      const request = { organizationId: ctx.organizationId, restaurantId: ctx.restaurantId, locationId: initial.locationId, proposalId: id, expectedVersion: confirmation.expectedVersion, confirmed: confirmation.confirmed, supplierId: supplierId ?? null };
+      return executeIdempotent({ kind: 'organization', context: ctx }, 'ai.text.proposal.confirm', key, request, tx, async () => {
+        // Keep the organization usage lock before the proposal row lock, matching reservation/finalization order.
+        await confirmationOps.settleUsage(ctx, initial.usageReservationId, '1', tx);
+        const proposal = await aiProposalRepository.get(ctx, id, tx, true);
+        if (proposal.actorUserId !== ctx.actor.userId || proposal.version !== confirmation.expectedVersion || proposal.status !== 'ready' || !proposal.candidate) throw new DomainError('RESOURCE_CONFLICT', 409);
+        const review = proposal.review as { action?: AiTextCandidate['action']; ingredientId?: string; supplierId?: string; quantity?: string; unit?: AiTextCandidate['unit']; unitPrice?: string; reason?: string; missingFields?: string[] };
+        const action = review.action ?? proposal.candidate.action;
+        const location = await tx.query('select id from core.stock_locations where organization_id=$1 and restaurant_id=$2 and id=$3 and not archived', [ctx.organizationId, ctx.restaurantId, proposal.locationId]);
+        if (!location.rowCount) throw new DomainError('RESOURCE_NOT_FOUND', 404);
+        const catalog = await loadCatalog(ctx, tx);
+        const selectedIngredient = review.ingredientId ? catalog.find(entry => entry.id === review.ingredientId && entry.active) : undefined;
+        if (!selectedIngredient) throw new DomainError('RESOURCE_NOT_FOUND', 404);
+        if (action === 'receipt') {
+          if (!supplierId) throw new DomainError('VALIDATION_ERROR', 400);
+          const supplier = await tx.query('select id from core.suppliers where organization_id=$1 and id=$2 and not archived', [ctx.organizationId, supplierId]);
+          if (!supplier.rowCount) throw new DomainError('RESOURCE_NOT_FOUND', 404);
+        }
+        const unit = review.unit ?? proposal.candidate.unit;
+        const quantity = review.quantity ?? proposal.candidate.quantity;
+        const candidate = AiTextCandidateSchema.parse({ ...proposal.candidate, action, ingredientDescription: selectedIngredient.name, quantity, unit, unitPrice: review.unitPrice ?? proposal.candidate.unitPrice, reason: review.reason ?? proposal.candidate.reason, ambiguous: false });
+        const validated = validateInventoryCandidate(candidate, catalog, { locationId: proposal.locationId, ...(supplierId ? { supplierId } : {}) });
+        if (validated.status !== 'ready' || validated.ingredientId !== selectedIngredient.id || validated.missingFields.length !== 0 || !quantity || !unit) throw new DomainError('VALIDATION_ERROR', 400);
+        const inputUnit = { kind: 'standard' as const, code: unit };
+        let result: unknown;
+        let resultId: string;
+        let resultKind: 'receipt' | 'movement';
+        try {
+          if (action === 'receipt') {
+            if (!validated.unitPrice) throw new DomainError('VALIDATION_ERROR', 400);
+            const draft = await confirmationOps.draftReceipt(ctx, { supplierId: supplierId!, locationId: proposal.locationId, items: [{ ingredientId: selectedIngredient.id, quantity, unit: inputUnit, unitPrice: validated.unitPrice }] }, tx);
+            result = await confirmationOps.receiveReceipt(ctx, draft.id, key, tx);
+            resultId = draft.id;
+            resultKind = 'receipt';
+            await appendInventoryAudit(ctx, { action: 'inventory.receipt.received', entityId: resultId }, tx);
+          } else if (action === 'issue') {
+            if (!candidate.reason?.trim()) throw new DomainError('VALIDATION_ERROR', 400);
+            result = await confirmationOps.issueStock(ctx, { ingredientId: selectedIngredient.id, locationId: proposal.locationId, quantity, unit: inputUnit, reason: candidate.reason }, key, tx);
+            resultId = (result as { movementId: string }).movementId;
+            resultKind = 'movement';
+            await appendInventoryAudit(ctx, { action: 'inventory.issue.posted', entityId: resultId }, tx);
+          } else {
+            throw new DomainError('VALIDATION_ERROR', 400);
+          }
+        } catch (error) {
+          if (error instanceof InventoryCalculationError) {
+            throw new DomainError(error.code === 'INSUFFICIENT_STOCK' ? 'INSUFFICIENT_STOCK' : error.code === 'RESOURCE_CONFLICT' ? 'RESOURCE_CONFLICT' : 'VALIDATION_ERROR', error.code === 'INSUFFICIENT_STOCK' || error.code === 'RESOURCE_CONFLICT' ? 409 : 400);
+          }
+          throw error;
+        }
+        const confirmed = await aiProposalRepository.markTerminal(ctx, id, proposal.version, { status: 'confirmed', resultKind, resultId }, tx);
+        return { proposal: dto(confirmed), result };
+      });
+    });
+  }
+
+  return { createProposal, getProposal, updateProposal, discardProposal, confirmProposal };
 }

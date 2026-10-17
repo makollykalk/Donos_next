@@ -165,6 +165,19 @@ it('keeps the text proposal route unavailable when no extractor is configured in
   } finally { await app.close(); }
 });
 
+it('requires explicit true confirmation on the proposal confirmation route', async () => {
+  const app = buildApp({ database: stubDb(), ...auth });
+  try {
+    const response = await app.inject({
+      method: 'POST', url: `${route}/${randomUUID()}/confirm`,
+      headers: { authorization: 'Bearer test', 'x-donos-context': contextToken, 'idempotency-key': randomUUID() },
+      payload: { expectedVersion: 1, confirmed: false },
+    });
+    expect(response.statusCode).toBe(400);
+    expect(response.json().error.code).toBe('VALIDATION_ERROR');
+  } finally { await app.close(); }
+});
+
 it('accepts the narrow injectable extractor contract without calling it during construction', async () => {
   const calls: Array<{ text: string; requestId: string }> = [];
   const extractor: TextExtractor = async input => { calls.push(input); return {}; };

@@ -10,14 +10,15 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-16-ai-text-in-app-design.md`
 
-**Status:** plano e política de retenção aprovados pelo usuário em 2026-10-16. Tarefa 1 concluída e revisada. Em 2026-10-16, o usuário autorizou migrations aditivas e testes sintéticos da Tarefa 2 somente no Supabase DONOS Next DEV `kfthwjrvgslnsjigqnyc` (C07-DEV); sem reset, produção, legado, deploy ou integração paga.
+**Status:** plano e política de retenção aprovados pelo usuário em 2026-10-16. Tarefas 1–3 concluídas e revisadas; Tarefa 4 implementada e commitada em `e20b634`, porém o gate de revisão ficou pendente porque os testes em memória não provam PostgreSQL/ledger/locking. O usuário autorizou preparar esta revisão do plano. A emenda para validar Tarefa 4 no C07-DEV está **pendente de revisão humana**; não executar conexão/teste antes dessa revisão.
 
 ## Global Constraints
 
 - Usar `ai_text_whatsapp` no protótipo, sem habilitar WhatsApp; uma proposta contém uma ação e um insumo.
 - Nenhum provedor, segredo, chamada paga/remota, deploy, produção ou legado neste subciclo. A única migration remota permitida é a aditiva da Tarefa 2 em C07-DEV, por autorização explícita registrada; nenhum reset ou outra migration remota é permitido.
-- Não executar integração contra `.local/dev.json`/`tests/helpers/local-db.ts`; esse helper aponta para o Supabase DEV hospedado.
-- Antes de qualquer conexão, comprovar o alvo exato: projectRef e URL Supabase iguais a `kfthwjrvgslnsjigqnyc`, e hostname/credencial Postgres vinculados ao mesmo projeto. Tarefa 2 pode operar somente nesse DEV autorizado; negar qualquer outra configuração. Nunca executar reset nem migrations pendentes fora do Ciclo 07A.
+- Não executar integração contra `.local/dev.json`/`tests/helpers/local-db.ts`; esse helper genérico aponta para o Supabase DEV hospedado.
+- Antes de qualquer conexão, comprovar o alvo exato: projectRef e URL Supabase iguais a `kfthwjrvgslnsjigqnyc`, e hostname/credencial Postgres vinculados ao mesmo projeto. Tarefa 2 pode aplicar somente suas migrations aditivas autorizadas. **Proposta pendente de aprovação:** Tarefa 4 poderá rodar somente testes sintéticos no mesmo C07-DEV via `tests/helpers/cycle07-local-db.ts`, com opt-in explícito `DONOS_C07_APPROVED_PROJECT_REF` e configuração protegida fora do worktree. Verificar as migrations requeridas por leitura; se faltarem ou houver drift, abortar sem aplicar migration. Qualquer outra configuração/host deve falhar antes da criação do pool. Nunca executar reset.
+- Para a proposta T4, não expor valores de credenciais em logs/saídas, não usar service_role, não acessar outro alvo e não executar alteração persistente até a revisão humana desta emenda. Fixtures devem ser geradas/identificadas para teste; todas as operações reversíveis precisam de rollback ou cleanup comprovado. Nunca apagar ou editar ledger/auditoria append-only para limpeza. Se a prova concorrente exigir resíduo permanente não delimitado, parar e apresentar o plano de resíduo antes de executar.
 - Proprietário, sessão, `organization_id`, `restaurant_id` e local são validados no servidor e RLS; nunca confiar em IDs/políticas retornados pelo extrator.
 - Nunca efetivar movimento antes de confirmação explícita. Ledger append-only, idempotência e rollback completo; sem saldo negativo.
 - Quantidade/dinheiro ficam em strings decimais, unidade-base ou razão exata; sem `number` binário em cálculos críticos.
@@ -148,6 +149,45 @@
 - [ ] **Passo 7: commit.** `feat(ai): confirm text proposals atomically`.
 
 **Checkpoint:** antes de UI, revisão independente de transação, ledger, idempotência e isolamento dos novos comandos.
+
+### Tarefa 4R — Prova transacional em PostgreSQL para liberar o checkpoint
+
+**Estado:** emenda de plano proposta pelo coordenador após a revisão de `e20b634`; aguarda revisão humana. Nenhuma conexão foi iniciada.
+
+**Arquivos:**
+
+- Criar `tests/integration/ai-text-confirmation-db.test.ts`.
+- Reutilizar `tests/helpers/cycle07-local-db.ts`, `packages/db/src/transaction.ts`, `packages/db/src/ai-proposal-repository.ts`, `packages/db/src/inventory-ledger-repository.ts`, `packages/domain-billing/src/usage.ts`, `packages/domain-purchases/src/receipts.ts` e `packages/domain-inventory/src/issues.ts`; modificar/criar outro helper somente se a revisão aprovar interfaces explícitas e guardas equivalentes.
+- Atualizar `docs/evidence/ciclo-07a-task-4.md`, `docs/PROJECT_STATE.md` e `docs/SPRINT_LOG.md` após executar e revisar os resultados.
+
+**Alvo e preflight fail-closed (sem migration):**
+
+1. Opt-in por `DONOS_C07_APPROVED_PROJECT_REF=kfthwjrvgslnsjigqnyc` e `DONOS_C07_CONFIG_DIR` apontando para config/fixtures/certificado fora do worktree; não imprimir seus conteúdos.
+2. Usar somente `tests/helpers/cycle07-local-db.ts`; sua guarda deve validar projectRef, URL, hostname/porta/database/usuário do pooler e TLS verificado. Qualquer divergência deve abortar antes de abrir pool.
+3. Confirmar por consulta read-only que as migrations da Tarefa 2 estão presentes; não aplicar migrations, resetar ou alterar schema.
+4. Usar somente atores/organizações/unidades sintéticos A/B já previstos em `tests/helpers/fixtures.ts`; não consultar nem modificar dados de cliente. Toda criação de proposta/reserva de teste deve usar chave/run id exclusivo.
+5. Caso cleanup/rollback não seja verificável, ou um cenário concorrente deixe efeito append-only não claramente identificado e delimitado, abortar esse cenário antes da operação e solicitar revisão humana do impacto. Ledger e auditoria nunca são apagados nem editados.
+
+**Interfaces e comportamento a provar:**
+
+- Instanciar o serviço de confirmação com `createDatabase(runtimePool())` e operações reais de compras/estoque/uso. Resolver ator por `login('a')` + `createActorVerifier`; nunca usar token/ator de produção.
+- Para recebimento: criar proposta `ready` sintética e confirmar literalmente; no mesmo `Tx` observar exatamente um recebimento/movimento, quantidade 5 kg, valor R$190, preço histórico R$38/kg, proposta `confirmed`, uso consistente e auditoria. Uma leitura anterior à confirmação deve mostrar zero efeito.
+- Para baixa: exigir motivo; com saldo insuficiente, verificar `INSUFFICIENT_STOCK` e saldo nunca negativo.
+- Para idempotência/concorrência: executar chaves repetidas e distintas em conexões PostgreSQL separadas; provar serialização/lock na linha real, no máximo uma finalização/uma chamada da operação de movimento e resposta conflitante/replay correta. Não substituir o `Tx` real por fila JavaScript.
+- Para rollback: injetar falha depois de executar uma operação de domínio real e antes da terminalização; consultar por segunda conexão e provar rollback de movimento, saldo, histórico de preço, proposta, reserva/uso, idempotência e auditoria.
+- Para tenant: usar ator B e contexto A/B para comprovar que ID forjado não confirma a proposta nem vaza dados, além das checagens da API.
+
+**Passos TDD/verificação:**
+
+- [ ] **Passo 1: acrescentar testes RED no arquivo novo.** Nomear individualmente os casos de recebimento real, baixa bloqueada, lock/idempotência concorrente, rollback após operação real e tenant cruzado; usar setup sintético com run id.
+- [ ] **Passo 2: provar a guarda antes de conectar.** Testar `assertCycle07Target` para URL/projectRef/host/usuário/TLS/config-directory divergentes; demonstrar que cada caso falha antes de criar `pg.Pool`.
+- [ ] **Passo 3: executar somente após aprovação desta emenda.** Definir as duas variáveis de opt-in na sessão do processo e rodar `pnpm exec vitest run --config vitest.integration.config.ts tests/integration/ai-text-confirmation-db.test.ts`; abortar se preflight falhar.
+- [ ] **Passo 4: ajustar testes e cleanup sem relaxar os asserts.** Não afrouxar atomicidade/tenant/concorrência para acomodar fixture. Nunca remover linhas de ledger/auditoria; se um cenário não puder provar resultado sem efeito persistente delimitado, parar e atualizar a proposta para aprovação.
+- [ ] **Passo 5: rerodar gates.** Reexecutar o arquivo de DB autorizado, os 17 testes focados do serviço, `pnpm test:unit`, `pnpm typecheck` e `git diff --check`; identificar separadamente teste remoto DEV selecionado e suite geral.
+- [ ] **Passo 6: revisão independente read-only.** Conferir consultas reais, locks, estados/custos, rollback, limites de target, RLS e evidência, sem executar novas escritas.
+- [ ] **Passo 7: atualizar evidência e checkpoint.** Registrar queries/testes observados, cleanup, alvo validado sem segredos e limitações. Só fechar Tarefa 4 e iniciar Tarefa 5 após revisão PASS; se qualquer cenário deixar o gate pendente, manter UI bloqueada.
+
+**Checkpoint da emenda:** primeiro revisão humana deste plano; depois, só o C07-DEV já autorizado, sem migrations/reset, usando testes/fixtures sintéticos com target guard. Nenhum trabalho de UI começa antes da revisão técnica final.
 
 ### Tarefa 5 — Interface Apple Design para App 01
 

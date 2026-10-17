@@ -12,7 +12,7 @@
 ## Ciclo 07A — proposta por texto no App 01
 
 - **Período:** 2026-10-16.
-- **Estado:** Tarefas 1–3 concluídas e revisadas. Tarefa 4 implementada em `e20b634`; revisão independente não identificou defeito de código, mas deixou o gate aberto porque os testes sintéticos não comprovam transação/concorrência/rollback em PostgreSQL. Tarefa 5 não iniciada.
+- **Estado:** Tarefas 1–3 concluídas e revisadas. Tarefa 4 implementada em `e20b634`; revisão independente não identificou defeito de código, mas deixou o gate aberto porque os testes sintéticos não comprovam transação/concorrência/rollback em PostgreSQL. O fundador aprovou preparar emenda de plano T4R para alvo isolado e guardado; a emenda aguarda revisão humana. Tarefa 5 não iniciada.
 - **Decisões aprovadas:** uma ação e um insumo por proposta; medidor/entitlement `ai_text_whatsapp` no protótipo sem WhatsApp; extrator determinístico apenas em desenvolvimento/testes; confirmação explícita e movimento transacional.
 - **Implementação Tarefa 1:** contratos e domínio puro, commits `72625a6` a `9dc0f20`; revisão round 2 sem achados Important/Critical. `pnpm test:unit` 173/173, `pnpm typecheck` e `git diff --check` passaram. Frontend ainda não iniciado; aplicar Apple Design skill na Tarefa 5.
 - **Migrations Tarefa 2:** `20261016190345_cycle07_ai_text_proposals` e `20261016190427_cycle07_ai_proposal_reservation_fk_index`, aplicadas somente ao Supabase DONOS Next DEV `kfthwjrvgslnsjigqnyc`, alvo autorizado para migrations aditivas C07 e testes sintéticos. Commit local `4fc3a31`. Proibidos reset, produção, legado, deploy e integrações pagas.

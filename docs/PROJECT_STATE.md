@@ -23,7 +23,8 @@ Atualizado em 2026-10-16.
 - Branch ativa: `codex/ciclo-07-ai-text`, commit da Tarefa 4 `e20b634`. Nenhuma alteração de código pendente após esse commit; esta sessão atualiza apenas a documentação de estado/evidência.
 - Tarefa 4: `pnpm exec vitest run --config vitest.integration.config.ts tests/integration/ai-text-api.test.ts tests/integration/ai-text-concurrency.test.ts` passou 17/17; `pnpm test:unit` passou 178/178; `pnpm typecheck` e `git diff --check` passaram.
 - Revisão independente: NEEDS FIXES no gate de prova, sem defeito de código identificado. A concorrência e o rollback são modelados por adapter em memória e operações stub; não provam locks, RLS, ledger ou rollback SQL real. Evidência em [Ciclo 07A Tarefa 4](evidence/ciclo-07a-task-4.md).
-- Próximo passo: obter ambiente PostgreSQL descartável e executar integração real conforme o gate da Tarefa 4, ou revisar formalmente spec/plano com aprovação humana antes de qualquer avanço dependente. Tarefa 5 não iniciada.
+- O fundador aprovou preparar revisão do plano para usar alvo de teste isolado e explicitamente guardado. A proposta de Tarefa 4R está em [ADR-0007](adr/0007-cycle-07a-task-4-test-target.md) e no plano; aguarda revisão humana. Nenhum teste remoto foi executado nesta emenda.
+- Próximo passo: revisar/aprovar a emenda T4R, depois executar somente o alvo nela previsto. Tarefa 5 não iniciada.
 
 ## Base do ciclo e estado geral
 

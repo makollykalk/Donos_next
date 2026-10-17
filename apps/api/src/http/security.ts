@@ -1,10 +1,12 @@
 import type { FastifyRequest } from 'fastify';
 import type { Database,VerifiedActor } from '@donos/db';
 import { DomainError } from '@donos/db';
+import type { TextExtractor } from '../services/ai-text-types.js';
 export type AppDependencies=Readonly<{
   database?:Database;
   verifyActor?:(token:string,requestId:string)=>Promise<VerifiedActor>;
   corsOrigins?:readonly string[];
+  textExtractor?:TextExtractor;
 }>;
 export function createServices(deps:AppDependencies) {
   function database():Database { if(!deps.database) throw new DomainError('DEPENDENCY_UNAVAILABLE',503); return deps.database; }
@@ -16,7 +18,7 @@ export function createServices(deps:AppDependencies) {
     await database().withActorTx(actor,async()=>undefined,allowRevoked);
     return actor;
   }
-  return {database,actor};
+  return {database,actor,textExtractor:deps.textExtractor};
 }
 export type ApiServices=ReturnType<typeof createServices>;
 export function validate<T>(schema:{safeParse:(input:unknown)=>{success:boolean;data?:T}},input:unknown):T {

@@ -59,6 +59,9 @@ importers:
       '@donos/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@donos/domain-ai':
+        specifier: workspace:*
+        version: link:../../packages/domain-ai
       '@donos/domain-billing':
         specifier: workspace:*
         version: link:../../packages/domain-billing

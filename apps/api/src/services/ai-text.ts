@@ -43,8 +43,20 @@ async function inContext<T>(db: Database, args: ApiArgs, fn: (ctx: RestaurantCon
 }
 
 async function loadCatalog(ctx: RestaurantContext, tx: Tx): Promise<InventoryCatalogEntry[]> {
-  const result = await inventoryCatalog.listIngredients(ctx, { limit: 50 }, tx);
-  return result.items.map(item => ({ id: item.id, name: item.name, baseUnit: item.baseUnit, active: !item.archived })) as InventoryCatalogEntry[];
+  const entries: InventoryCatalogEntry[] = [];
+  let cursor: string | undefined;
+  do {
+    const page = await inventoryCatalog.listIngredients(ctx, { limit: 100, ...(cursor ? { cursor } : {}) }, tx);
+    entries.push(...page.items.map(item => ({ id: item.id, name: item.name, baseUnit: item.baseUnit, active: !item.archived })) as InventoryCatalogEntry[]);
+    cursor = page.nextCursor ?? undefined;
+  } while (cursor);
+  return entries;
+}
+
+function scalarUnit(unit: UpdateTextProposalInput['unit']): AiTextCandidate['unit'] | undefined {
+  if (!unit) return undefined;
+  if (unit.kind === 'package') throw new DomainError('VALIDATION_ERROR', 400);
+  return unit.code;
 }
 
 async function proposalByKey(ctx: RestaurantContext, key: string, tx: Tx): Promise<ProposalRecord> {
@@ -75,7 +87,7 @@ export function createAiTextService(db: Database, extractor?: TextExtractor): Ai
       if (!usage.created) return { existing: await proposalByKey(ctx, key, tx) };
       const proposal = await aiProposalRepository.insert(ctx, {
         locationId: cleanInput.locationId, operationKey: key, requestHash, usageReservationId: usage.reservation.id,
-        status: 'interpreting', candidate: null, review: { action: null, missingFields: [] },
+        status: 'interpreting', candidate: unsupported, review: { action: null, missingFields: [] },
       }, tx);
       proposalId = proposal.id;
       return { existing: null as ProposalRecord | null };
@@ -86,14 +98,14 @@ export function createAiTextService(db: Database, extractor?: TextExtractor): Ai
     } catch (error) {
       await db.withRestaurantTx(args.actor, args.selection, args.contextToken, async (ctx, tx) => {
         await releaseUsage(ctx, reservationId!, 'NOT_DISPATCHED', tx);
-        await tx.query("update core.ai_text_proposals set status='discarded',terminal_at=now() where organization_id=$1 and restaurant_id=$2 and id=$3 and status='interpreting'", [ctx.organizationId, ctx.restaurantId, proposalId]);
+        await aiProposalRepository.markTerminal(ctx, proposalId!, 1, { status: 'discarded', resultId: null }, tx);
       });
       throw error;
     }
 
     const markReconciliationRequired = async () => db.withRestaurantTx(args.actor, args.selection, args.contextToken, async (ctx, tx) => {
       await markUsageUnknown(ctx, reservationId!, tx);
-      await tx.query("update core.ai_text_proposals set status='reconciliation_required' where organization_id=$1 and restaurant_id=$2 and id=$3 and status='interpreting'", [ctx.organizationId, ctx.restaurantId, proposalId]);
+      await aiProposalRepository.markReconciliationRequired(ctx, proposalId!, 1, tx);
     });
     let extracted: unknown;
     try {
@@ -134,28 +146,43 @@ export function createAiTextService(db: Database, extractor?: TextExtractor): Ai
     if (!parsed.success) throw new DomainError('VALIDATION_ERROR', 400);
     return inContext(db, args, async (ctx, tx) => {
       await requireEntitlement(ctx, 'ai_text_whatsapp', tx);
-      return executeIdempotent({ kind: 'organization', context: ctx }, 'ai.text.proposal.update', key, { id, input: parsed.data }, tx, async () => {
-        const previous = await aiProposalRepository.get(ctx, id, tx);
+      const previous = await aiProposalRepository.get(ctx, id, tx);
+      const contextHash = canonicalHash(args.contextToken);
+      return executeIdempotent({ kind: 'organization', context: ctx }, 'ai.text.proposal.update', key,
+        { organizationId: ctx.organizationId, restaurantId: ctx.restaurantId, contextHash, locationId: previous.locationId, proposalId: id, input: parsed.data }, tx, async () => {
         const review = parsed.data;
+        const priorReview = previous.review as { action?: AiTextCandidate['action']; ingredientId?: string; supplierId?: string; quantity?: string; unit?: AiTextCandidate['unit']; unitPrice?: string; reason?: string };
         const location = await tx.query('select id from core.stock_locations where organization_id=$1 and restaurant_id=$2 and id=$3 and not archived', [ctx.organizationId, ctx.restaurantId, previous.locationId]);
         if (!location.rowCount) throw new DomainError('RESOURCE_NOT_FOUND', 404);
         const catalog = await loadCatalog(ctx, tx);
-        const ingredient = review.ingredientId ? catalog.find(item => item.id === review.ingredientId && item.active) : undefined;
-        if (review.ingredientId && !ingredient) throw new DomainError('RESOURCE_NOT_FOUND', 404);
-        if (review.supplierId) {
-          const supplier = await tx.query('select id from core.suppliers where organization_id=$1 and id=$2 and not archived', [ctx.organizationId, review.supplierId]);
+        const selectedIngredientId = review.ingredientId ?? priorReview.ingredientId;
+        const ingredient = selectedIngredientId
+          ? catalog.find(item => item.id === selectedIngredientId && item.active)
+          : undefined;
+        if (selectedIngredientId && !ingredient) throw new DomainError('RESOURCE_NOT_FOUND', 404);
+        const supplierId = review.supplierId ?? priorReview.supplierId;
+        if (supplierId) {
+          const supplier = await tx.query('select id from core.suppliers where organization_id=$1 and id=$2 and not archived', [ctx.organizationId, supplierId]);
           if (!supplier.rowCount) throw new DomainError('RESOURCE_NOT_FOUND', 404);
         }
+        const unit = scalarUnit(review.unit) ?? priorReview.unit ?? previous.candidate?.unit ?? null;
+        const action = review.action ?? priorReview.action ?? previous.candidate?.action ?? null;
+        const quantity = review.quantity ?? priorReview.quantity ?? previous.candidate?.quantity ?? null;
+        const unitPrice = review.unitPrice ?? priorReview.unitPrice ?? previous.candidate?.unitPrice ?? null;
+        const reason = review.reason ?? priorReview.reason ?? previous.candidate?.reason ?? null;
+        const resolvedAmbiguity = Boolean(action && ingredient && quantity && unit &&
+          (action === 'receipt' ? (unitPrice || previous.candidate?.totalPrice) : reason));
         const candidate = AiTextCandidateSchema.parse({
-          ...(previous.candidate ?? unsupported), action: review.action ?? previous.candidate?.action ?? null,
+          ...(previous.candidate ?? unsupported), action,
           ingredientDescription: ingredient?.name ?? previous.candidate?.ingredientDescription ?? null,
-          quantity: review.quantity ?? previous.candidate?.quantity ?? null, unit: review.unit ?? previous.candidate?.unit ?? null,
-          unitPrice: review.unitPrice ?? previous.candidate?.unitPrice ?? null, reason: review.reason ?? previous.candidate?.reason ?? null,
+          quantity, unit, unitPrice, reason,
+          ambiguous: previous.candidate?.ambiguous ? !resolvedAmbiguity : false,
         });
-        const validated = validateInventoryCandidate(candidate, catalog, { locationId: previous.locationId, ...(review.supplierId ? { supplierId: review.supplierId } : {}) });
+        const validationCatalog = ingredient ? [ingredient] : catalog;
+        const validated = validateInventoryCandidate(candidate, validationCatalog, { locationId: previous.locationId, ...(supplierId ? { supplierId } : {}) });
         return dto(await aiProposalRepository.updateReview(ctx, id, review.expectedVersion, {
           status: validated.status, candidate: validated.candidate,
-          review: { action: validated.action, ingredientId: validated.ingredientId, ...(review.supplierId ? { supplierId: review.supplierId } : {}), unitPrice: validated.unitPrice, missingFields: validated.missingFields },
+          review: { action: validated.action, ingredientId: validated.ingredientId, ...(supplierId ? { supplierId } : {}), quantity, unit, unitPrice: validated.unitPrice, reason, missingFields: validated.missingFields },
         }, tx));
       });
     });
@@ -166,8 +193,10 @@ export function createAiTextService(db: Database, extractor?: TextExtractor): Ai
     if (!UUIDSchema.safeParse(id).success || !UUIDSchema.safeParse(key).success) throw new DomainError('VALIDATION_ERROR', 400);
     return inContext(db, args, async (ctx, tx) => {
       await requireEntitlement(ctx, 'ai_text_whatsapp', tx);
-      return executeIdempotent({ kind: 'organization', context: ctx }, 'ai.text.proposal.discard', key, { id }, tx, async () => {
-        const previous = await aiProposalRepository.get(ctx, id, tx);
+      const previous = await aiProposalRepository.get(ctx, id, tx);
+      const contextHash = canonicalHash(args.contextToken);
+      return executeIdempotent({ kind: 'organization', context: ctx }, 'ai.text.proposal.discard', key,
+        { organizationId: ctx.organizationId, restaurantId: ctx.restaurantId, contextHash, locationId: previous.locationId, proposalId: id }, tx, async () => {
         await aiProposalRepository.markTerminal(ctx, id, previous.version, { status: 'discarded', resultId: null }, tx);
         return { id, status: 'discarded' as const };
       });

@@ -1,6 +1,7 @@
 import {createRoot} from 'react-dom/client';
 import {createAuthClient,createOwnerRuntime} from '@donos/auth-client';
 import {App} from './App.js';
+import './ai/ai-text.css';
 const root=createRoot(document.getElementById('root')!);
 try{
  const auth=createAuthClient({url:import.meta.env.VITE_SUPABASE_URL??'',publishableKey:import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY??'',app:'estoque',storage:sessionStorage});

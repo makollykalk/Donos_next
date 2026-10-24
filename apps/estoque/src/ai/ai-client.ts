@@ -1,7 +1,7 @@
 import type {AiTextProposal,AiTextProposalReview} from '@donos/contracts';
 import type {InventoryClient} from '../inventory/inventory-client.js';
 
-export type AiConfirmation = Readonly<{expectedVersion:number;confirmed:true;supplierId?:string}>;
+export type AiConfirmation = Readonly<{expectedVersion:number;confirmed:true}>;
 export type AiConfirmationResult = {proposal:AiTextProposal;result:unknown};
 const path='/ai/text/proposals';
 export function createAiClient(client:InventoryClient){

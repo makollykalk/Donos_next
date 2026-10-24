@@ -3,7 +3,7 @@ import {ApiFailure} from '@donos/auth-client';
 import type {AiTextProposal,AiTextProposalReview,Ingredient,Supplier} from '@donos/contracts';
 import {AiTextProposalReviewSchema} from '@donos/contracts';
 import type {InventoryClient} from '../inventory/inventory-client.js';
-import {displayDecimal,normalizeDecimalInput} from '../inventory/decimal-input.js';
+import {displayDecimal,multiplyDecimalStrings,normalizeDecimalInput} from '../inventory/decimal-input.js';
 import {createAiClient,type AiConfirmation,type AiConfirmationResult} from './ai-client.js';
 import {AiProposalReview,type AiReviewDraft} from './AiProposalReview.js';
 
@@ -41,7 +41,7 @@ export function AiTextWorkspace({client,ingredients,suppliers,organizationId,res
     const quantity=normalizeDecimalInput(draft.quantity,6),unitPrice=draft.action==='receipt'?normalizeDecimalInput(draft.unitPrice,12):undefined;
     const ingredient=ingredients.find(item=>item.id===draft.ingredientId&&!item.archived);
     const units=ingredient?.baseUnit==='kg'?['kg','g']:ingredient?.baseUnit==='L'?['L','mL']:['un'];
-    if(!ingredient||!draft.action||!draft.unit||!units.includes(draft.unit)||quantity==='0'||(draft.action==='receipt'&&(unitPrice==='0'||!suppliers.some(item=>item.id===draft.supplierId&&!item.archived))))throw Error('Invalid review');
+    if(!ingredient||!draft.action||!draft.unit||!units.includes(draft.unit)||quantity==='0'||(draft.action==='receipt'&&(unitPrice===undefined||unitPrice==='0'||multiplyDecimalStrings(quantity,unitPrice)===null||!suppliers.some(item=>item.id===draft.supplierId&&!item.archived))))throw Error('Invalid review');
     const input={expectedVersion:proposal.version,action:draft.action,ingredientId:draft.ingredientId,quantity,unit:{kind:'standard' as const,code:draft.unit},...(draft.action==='receipt'?{supplierId:draft.supplierId,unitPrice}:{reason:draft.reason.trim()})};
     const parsed=AiTextProposalReviewSchema.safeParse(input);if(parsed.success)review=parsed.data;
   }catch{/* Incomplete decimal or selection is displayed inline. */}}
@@ -98,7 +98,7 @@ export function AiTextWorkspace({client,ingredients,suppliers,organizationId,res
   }
   async function confirm(){await run(async()=>{
     if(!proposal||!review||dirty||proposal.status!=='ready'||frozen.current||frozenReview.current)return;
-    const body:AiConfirmation=Object.freeze({expectedVersion:proposal.version,confirmed:true,...(draft?.action==='receipt'?{supplierId:draft.supplierId}:{})});
+    const body:AiConfirmation=Object.freeze({expectedVersion:proposal.version,confirmed:true});
     const request=Object.freeze({id:proposal.id,key:crypto.randomUUID(),body});frozen.current=request;await sendConfirmation(request);
   });}
   async function check(){await run(async()=>{

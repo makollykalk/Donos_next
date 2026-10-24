@@ -9,7 +9,7 @@ export type TextExtractor = (input: { text: string; requestId: string }) => Prom
 export type AiTextArgs = Readonly<{ actor: VerifiedActor; selection: ContextSelection; contextToken: string }>;
 export type CreateTextProposalInput = Readonly<{ locationId: string; text: string }>;
 export type UpdateTextProposalInput = AiTextProposalReview;
-export type ConfirmTextProposalInput = Readonly<{ expectedVersion: number; confirmed: true; supplierId?: string | undefined }>;
+export type ConfirmTextProposalInput = Readonly<{ expectedVersion: number; confirmed: true }>;
 export type AiTextConfirmationOperations = Readonly<{
   draftReceipt: typeof draftReceipt;
   receiveReceipt: typeof receiveReceipt;

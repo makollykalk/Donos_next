@@ -59,7 +59,6 @@ export const AiTextProposalReviewSchema = z.strictObject({
 export const AiTextProposalConfirmSchema = z.strictObject({
   expectedVersion: z.number().int().positive(),
   confirmed: z.literal(true),
-  supplierId: UUIDSchema.optional(),
 });
 
 export type AiTextAction = z.infer<typeof AiTextActionSchema>;

@@ -222,7 +222,7 @@ export function createAiTextService(db: Database, extractor?: TextExtractor, ove
       await requireEntitlement(ctx, 'ai_text_whatsapp', tx);
       const initial = await aiProposalRepository.get(ctx, id, tx);
       if (initial.actorUserId !== ctx.actor.userId) throw new DomainError('RESOURCE_NOT_FOUND', 404);
-      const supplierId = confirmation.supplierId ?? (initial.review as { supplierId?: string }).supplierId;
+      const supplierId = (initial.review as { supplierId?: string }).supplierId;
       const request = { organizationId: ctx.organizationId, restaurantId: ctx.restaurantId, locationId: initial.locationId, proposalId: id, expectedVersion: confirmation.expectedVersion, confirmed: confirmation.confirmed, supplierId: supplierId ?? null };
       return executeIdempotent({ kind: 'organization', context: ctx }, 'ai.text.proposal.confirm', key, request, tx, async () => {
         // Keep the organization usage lock before the proposal row lock, matching reservation/finalization order.

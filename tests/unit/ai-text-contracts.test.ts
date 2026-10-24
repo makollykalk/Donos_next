@@ -4,6 +4,7 @@ import {
   AiTextProposalSchema,
   AiTextRequestSchema,
   AiTextProposalStatusSchema,
+  AiTextProposalConfirmSchema,
 } from '@donos/contracts';
 
 const uuid = '11111111-1111-4111-8111-111111111111';
@@ -43,5 +44,10 @@ describe('AI text contracts', () => {
     expect(AiTextProposalSchema.safeParse({ ...proposal, version: 0 }).success).toBe(false);
     expect(AiTextProposalStatusSchema.safeParse('interpreting').success).toBe(true);
     expect(AiTextProposalStatusSchema.safeParse('completed').success).toBe(false);
+  });
+
+  it('freezes the supplier at review and rejects supplier changes during confirmation', () => {
+    expect(AiTextProposalConfirmSchema.safeParse({ expectedVersion: 2, confirmed: true }).success).toBe(true);
+    expect(AiTextProposalConfirmSchema.safeParse({ expectedVersion: 2, confirmed: true, supplierId: uuid }).success).toBe(false);
   });
 });

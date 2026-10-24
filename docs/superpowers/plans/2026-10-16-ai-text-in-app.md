@@ -10,14 +10,14 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-16-ai-text-in-app-design.md`
 
-**Status:** plano e política de retenção aprovados pelo usuário em 2026-10-16. Tarefas 1–3 concluídas e revisadas; Tarefa 4 implementada e commitada em `e20b634`, porém o gate de revisão ficou pendente porque os testes em memória não provam PostgreSQL/ledger/locking. O usuário autorizou preparar esta revisão do plano. A emenda para validar Tarefa 4 no C07-DEV está **pendente de revisão humana**; não executar conexão/teste antes dessa revisão.
+**Status:** plano e política de retenção aprovados pelo usuário em 2026-10-16. Tarefas 1–3 concluídas e revisadas. Tarefa 4 foi implementada em `e20b634`; seu gate foi fechado pela T4R runtime 5/5 no C07-DEV e revisão independente final PASS em 2026-10-23. Tarefa 5 concluída no commit `bf1e69d` em 2026-10-23 após autorização humana, E2E sintético 8/8, typecheck, build App 01 e revisão independente PASS. Evidência em `docs/evidence/ciclo-07a-task-5.md`.
 
 ## Global Constraints
 
 - Usar `ai_text_whatsapp` no protótipo, sem habilitar WhatsApp; uma proposta contém uma ação e um insumo.
 - Nenhum provedor, segredo, chamada paga/remota, deploy, produção ou legado neste subciclo. A única migration remota permitida é a aditiva da Tarefa 2 em C07-DEV, por autorização explícita registrada; nenhum reset ou outra migration remota é permitido.
 - Não executar integração contra `.local/dev.json`/`tests/helpers/local-db.ts`; esse helper genérico aponta para o Supabase DEV hospedado.
-- Antes de qualquer conexão, comprovar o alvo exato: projectRef e URL Supabase iguais a `kfthwjrvgslnsjigqnyc`, e hostname/credencial Postgres vinculados ao mesmo projeto. Tarefa 2 pode aplicar somente suas migrations aditivas autorizadas. **Proposta pendente de aprovação:** Tarefa 4 poderá rodar somente testes sintéticos no mesmo C07-DEV via `tests/helpers/cycle07-local-db.ts`, com opt-in explícito `DONOS_C07_APPROVED_PROJECT_REF` e configuração protegida fora do worktree. Verificar as migrations requeridas por leitura; se faltarem ou houver drift, abortar sem aplicar migration. Qualquer outra configuração/host deve falhar antes da criação do pool. Nunca executar reset.
+- Antes de qualquer conexão, comprovar o alvo exato: projectRef e URL Supabase iguais a `kfthwjrvgslnsjigqnyc`, e hostname/credencial Postgres vinculados ao mesmo projeto. Tarefa 2 aplicou somente suas migrations aditivas autorizadas; T4R foi executada somente no mesmo C07-DEV via `tests/helpers/cycle07-local-db.ts`, com opt-in explícito e configuração protegida fora do worktree. Qualquer alvo distinto, reset ou nova migration segue proibido.
 - Para a proposta T4, não expor valores de credenciais em logs/saídas, não usar service_role, não acessar outro alvo e não executar alteração persistente até a revisão humana desta emenda. Fixtures devem ser geradas/identificadas para teste; todas as operações reversíveis precisam de rollback ou cleanup comprovado. Nunca apagar ou editar ledger/auditoria append-only para limpeza. Se a prova concorrente exigir resíduo permanente não delimitado, parar e apresentar o plano de resíduo antes de executar.
 - Proprietário, sessão, `organization_id`, `restaurant_id` e local são validados no servidor e RLS; nunca confiar em IDs/políticas retornados pelo extrator.
 - Nunca efetivar movimento antes de confirmação explícita. Ledger append-only, idempotência e rollback completo; sem saldo negativo.
@@ -152,21 +152,22 @@
 
 ### Tarefa 4R — Prova transacional em PostgreSQL para liberar o checkpoint
 
-**Estado:** emenda de plano proposta pelo coordenador após a revisão de `e20b634`; aguarda revisão humana. Nenhuma conexão foi iniciada.
+**Estado:** concluída em 2026-10-23. O teste T4R passou 5/5 no C07-DEV autorizado; a revisão independente final foi PASS. Detalhes, resíduos sintéticos permanentes e limites estão em `docs/evidence/ciclo-07a-task-4.md`.
 
 **Arquivos:**
 
-- Criar `tests/integration/ai-text-confirmation-db.test.ts`.
+- Criado e executado `tests/integration/ai-text-confirmation-db.test.ts` para a prova runtime delimitada (5/5).
 - Reutilizar `tests/helpers/cycle07-local-db.ts`, `packages/db/src/transaction.ts`, `packages/db/src/ai-proposal-repository.ts`, `packages/db/src/inventory-ledger-repository.ts`, `packages/domain-billing/src/usage.ts`, `packages/domain-purchases/src/receipts.ts` e `packages/domain-inventory/src/issues.ts`; modificar/criar outro helper somente se a revisão aprovar interfaces explícitas e guardas equivalentes.
 - Atualizar `docs/evidence/ciclo-07a-task-4.md`, `docs/PROJECT_STATE.md` e `docs/SPRINT_LOG.md` após executar e revisar os resultados.
 
 **Alvo e preflight fail-closed (sem migration):**
 
 1. Opt-in por `DONOS_C07_APPROVED_PROJECT_REF=kfthwjrvgslnsjigqnyc` e `DONOS_C07_CONFIG_DIR` apontando para config/fixtures/certificado fora do worktree; não imprimir seus conteúdos.
-2. Usar somente `tests/helpers/cycle07-local-db.ts`; sua guarda deve validar projectRef, URL, hostname/porta/database/usuário do pooler e TLS verificado. Qualquer divergência deve abortar antes de abrir pool.
-3. Confirmar por consulta read-only que as migrations da Tarefa 2 estão presentes; não aplicar migrations, resetar ou alterar schema.
+2. Usar somente `tests/helpers/cycle07-local-db.ts`; validar o opt-in e os realpaths do diretório + `dev.json`/`fixtures.json`/CA antes de ler credenciais. Depois de ler `dev.json`, validar projectRef, URL, hostname/porta/database/usuário do pooler e TLS verificado, sempre antes de abrir pool. Qualquer divergência aborta a execução.
+3. Confirmar por leitura do control plane Supabase, imediatamente antes do teste, que as duas migrations aprovadas da Tarefa 2 estão presentes e são o conjunto completo de migrations Cycle 07; o papel runtime `donos_api` não tem leitura de `supabase_migrations`. O preflight runtime continua em transação `READ ONLY`; não aplicar migrations, resetar ou alterar schema.
 4. Usar somente atores/organizações/unidades sintéticos A/B já previstos em `tests/helpers/fixtures.ts`; não consultar nem modificar dados de cliente. Toda criação de proposta/reserva de teste deve usar chave/run id exclusivo.
-5. Caso cleanup/rollback não seja verificável, ou um cenário concorrente deixe efeito append-only não claramente identificado e delimitado, abortar esse cenário antes da operação e solicitar revisão humana do impacto. Ledger e auditoria nunca são apagados nem editados.
+5. Após aprovação T4R, efeitos sintéticos de sucesso são permanentes e aceitos: setup em `core.ingredients`, saldos zero em todos os locais ativos da unidade A, `core.suppliers`, dois `core.request_contexts`, `core.usage_reservations`, oito eventos `core.usage_ledger`, quatro propostas e incremento de quatro unidades em `usage_buckets.settled_units`. Criações de ingredientes/fornecedores e seleção de contextos deixam auditoria; comandos de catálogo e revisões deixam idempotência. O cenário vencedor acrescenta um recibo/itens, movimento, histórico, confirmação idempotente e auditoria. Usar UUID do run no manifesto de chaves, nomes/request IDs, registrar IDs imediatamente após cada commit e verificar o inventário via segunda conexão. Não apagar nem estornar ledger/auditoria/movimentos. Os cenários de baixa bloqueada, rollback e tenant cruzado deixam somente seus setups/reservas/propostas já liquidadas, sem efeitos internos da confirmação. Se o inventário não puder ser delimitado, abortar antes da primeira escrita.
+6. Antes da primeira escrita, iniciar transação `READ ONLY` e verificar `current_database`, `current_user`, papel/alvo DEV e presença exata das duas migrations T2. Abortar em qualquer divergência.
 
 **Interfaces e comportamento a provar:**
 
@@ -179,17 +180,21 @@
 
 **Passos TDD/verificação:**
 
-- [ ] **Passo 1: acrescentar testes RED no arquivo novo.** Nomear individualmente os casos de recebimento real, baixa bloqueada, lock/idempotência concorrente, rollback após operação real e tenant cruzado; usar setup sintético com run id.
-- [ ] **Passo 2: provar a guarda antes de conectar.** Testar `assertCycle07Target` para URL/projectRef/host/usuário/TLS/config-directory divergentes; demonstrar que cada caso falha antes de criar `pg.Pool`.
-- [ ] **Passo 3: executar somente após aprovação desta emenda.** Definir as duas variáveis de opt-in na sessão do processo e rodar `pnpm exec vitest run --config vitest.integration.config.ts tests/integration/ai-text-confirmation-db.test.ts`; abortar se preflight falhar.
-- [ ] **Passo 4: ajustar testes e cleanup sem relaxar os asserts.** Não afrouxar atomicidade/tenant/concorrência para acomodar fixture. Nunca remover linhas de ledger/auditoria; se um cenário não puder provar resultado sem efeito persistente delimitado, parar e atualizar a proposta para aprovação.
-- [ ] **Passo 5: rerodar gates.** Reexecutar o arquivo de DB autorizado, os 17 testes focados do serviço, `pnpm test:unit`, `pnpm typecheck` e `git diff --check`; identificar separadamente teste remoto DEV selecionado e suite geral.
-- [ ] **Passo 6: revisão independente read-only.** Conferir consultas reais, locks, estados/custos, rollback, limites de target, RLS e evidência, sem executar novas escritas.
-- [ ] **Passo 7: atualizar evidência e checkpoint.** Registrar queries/testes observados, cleanup, alvo validado sem segredos e limitações. Só fechar Tarefa 4 e iniciar Tarefa 5 após revisão PASS; se qualquer cenário deixar o gate pendente, manter UI bloqueada.
+- [x] **Passo 1: acrescentar os casos.** Recebimento real, baixa bloqueada, concorrência/idempotência, rollback após operação real e tenant cruzado usam setup sintético com run UUID.
+- [x] **Passo 2: provar a guarda antes de conectar.** Os testes de alvo cobrem divergências e aprovam 7/7; qualquer falha aborta antes do pool.
+- [x] **Passo 3: executar com aprovação T4R.** Preflight `READ ONLY` passou antes de Auth/contexto/setup; a execução final autorizada passou 5/5.
+- [x] **Passo 4: ajustar asserts e inventário.** Comparações de reserva, ledger, cota, auditoria e idempotência foram reforçadas; inventário final foi confirmado por segunda conexão. Resíduos aprovados permanecem no DEV.
+- [x] **Passo 5: rerodar gates.** Arquivo runtime 5/5, focados 17/17, unitários 180/180, typecheck, TSC dos testes e `git diff --check` passaram no Node portátil v24.22.1.
+- [x] **Passo 6: revisão independente read-only.** Resultado final PASS; não executou testes nem acessou o banco.
+- [x] **Passo 7: atualizar evidência e checkpoint.** Evidência, estado e log registram resultado, resíduos e limitações. Tarefa 4/T4R está fechada tecnicamente; o checkpoint humano da Tarefa 5 foi concedido em 2026-10-23 e sua implementação foi concluída em seguida.
 
-**Checkpoint da emenda:** primeiro revisão humana deste plano; depois, só o C07-DEV já autorizado, sem migrations/reset, usando testes/fixtures sintéticos com target guard. Nenhum trabalho de UI começa antes da revisão técnica final.
+**Histórico do preflight:** uma tentativa anterior abortou corretamente porque o tenant sintético A ainda não tinha entitlement ativo `ai_text_whatsapp`. Após autorização explícita do usuário, foram configurados somente os entitlements simulados de A/B e a cota de teste de A no C07-DEV. A execução final posterior passou; a tentativa bloqueada não é o resultado vigente.
+
+**Checkpoint da emenda:** revisão humana e revisão técnica concluídas; T4R ficou restrita ao C07-DEV, sem migrations/reset, com atores sintéticos, target guard e inventário de resíduos. O usuário autorizou a Tarefa 5 em 2026-10-23; a UI foi entregue e revisada conforme as evidências desta seção.
 
 ### Tarefa 5 — Interface Apple Design para App 01
+
+**Estado:** concluída em 2026-10-23 após checkpoint humano autorizado pelo usuário, TDD, 8/8 E2Es sintéticos, typecheck e revisão independente PASS. Consulte `docs/evidence/ciclo-07a-task-5.md`.
 
 **Arquivos:**
 
@@ -201,29 +206,39 @@
 
 **Interfaces consumidas:** contratos aprovados da Tarefa 1, rotas da Tarefa 3 e contexto/geração de `inventory-client.ts`.
 
-- [ ] **Passo 1: escrever E2E RED mockado.** Texto canônico, interpretação, fornecedor ausente, edição/revisão, confirmação explícita e resultado; afirmar que nenhuma chamada de confirmação ocorre antes do clique.
-- [ ] **Passo 2: escrever E2E RED de falhas e contexto.** Erro de entitlement/cota mantém texto e oferece formulário manual; troca de unidade/local invalida proposta antiga; teclado/foco e `prefers-reduced-motion` não impedem uso.
-- [ ] **Passo 3: executar RED.** `pnpm exec playwright test tests/e2e/ai-text-flow.spec.ts`; esperado: falha porque a área de IA não existe.
-- [ ] **Passo 4: implementar componentes e estilos.** Foco visível, alvos confortáveis, tipografia do sistema, mensagens `role=status/alert`, `aria-busy`, sem sucesso prematuro. CSS oferece layout móvel/desktop, sem biblioteca nova; `prefers-reduced-motion` remove deslocamento.
-- [ ] **Passo 5: executar E2E e typecheck.** Esperado: fluxo completo via API mockada, sem chamadas reais ou dados persistidos de produção.
-- [ ] **Passo 6: commit.** `feat(estoque): add accessible ai text proposal flow`.
+- [x] **Passo 1: escrever E2E RED mockado.** Harness sintético completo de Auth/API, sem `owner-fixture.ts` e sem `.local`; cobre proposta canônica, fornecedor ausente, revisão e ausência de confirmação antecipada.
+- [x] **Passo 2: escrever E2E RED de falhas e contexto.** Cobertura de quota/fallback, troca de local, foco/redução de movimento, confirmação incerta e — após revisão independente — resposta perdida no PATCH e IDs de organização/unidade incompatíveis.
+- [x] **Passo 3: executar RED.** RED observado antes da implementação para área ausente; novos REDs observados para PATCH incerto, contexto cruzado e fallback durante confirmação incerta.
+- [x] **Passo 4: implementar componentes e estilos.** Foco visível, alvos confortáveis, tipografia do sistema, `role=status/alert`, `aria-busy`, CSS responsivo e suporte a movimento reduzido; resposta antiga de organização/unidade/local não é aceita.
+- [x] **Passo 5: executar E2E, typecheck e build.** Node v24.22.0: E2E sintético 8/8; `pnpm typecheck`; `pnpm --filter @donos/estoque build`; `git diff --check`.
+- [x] **Passo 6: revisão independente da Tarefa 5.** PASS após correção do caso de PATCH com resposta perdida; sem novos achados.
+- [x] **Passo 7: commit.** Implementação entregue no commit dedicado da Tarefa 5; alterações pré-existentes e misturadas da T4R continuam fora desse commit.
 
-**Checkpoint:** UI não interpreta erro de rede/timeout como falha definitiva de movimento; oferece verificação/retentativa idempotente.
+**Checkpoint:** fechado. A UI não interpreta erro de rede/timeout como falha definitiva de movimento; confirmações e revisões incertas exigem GET e replay da mesma chave/payload congelados. Verificação final documentada em `docs/evidence/ciclo-07a-task-5.md`.
 
 ### Tarefa 6 — Integração, evidências e revisão independente
 
 **Arquivos:**
 
-- Possível ajuste em `docs/DECISIONS.md`, `docs/PROJECT_STATE.md`, `docs/SPRINT_LOG.md` e criar `docs/evidence/ciclo-07-ai-text.md`.
+- Possível ajuste em `docs/DECISIONS.md`, `docs/PROJECT_STATE.md`, `docs/SPRINT_LOG.md` e criar `docs/evidence/ciclo-07a-task-6.md`.
+- Corrigir somente achados verificados que requeiram mudanças de código e seus testes RED; sem escopo de funcionalidade nova.
 - Nenhum ajuste automático em `docs/05-REGISTRO-DE-DECISOES.md` sem decisão de produto aprovada.
 
-- [ ] **Passo 1: execução integrada local.** Rodar unitários, integração local selecionada, E2E, `pnpm typecheck`, `pnpm lint`, `pnpm build` e `git diff --check`; anotar runtime e cada resultado.
-- [ ] **Passo 2: auditoria independente read-only.** Revisar RLS/API contra ID forjado/duas organizações, matemática/unidades/preço total, reserva/dispatch/settle e corrida de confirmação/rollback. Não usar banco compartilhado mutável.
-- [ ] **Passo 3: corrigir achados com teste RED antes do fix.** Reexecutar os alvos afetados após cada correção.
-- [ ] **Passo 4: registrar evidência e limites.** Diferenciar unitário, integração local selecionada, E2E mockado e replay completo; declarar explicitamente que nenhum provedor real/WhatsApp foi validado.
-- [ ] **Passo 5: preparar commits/PR do ciclo.** Atualizar estado e sprint log, criar PR contra o merge do Ciclo 06; não fazer merge/deploy nem iniciar Foto/Voz/WhatsApp.
+**Alvo de testes e limites da Tarefa 6:**
 
-**Checkpoint final:** evidência reproduzível, revisão sem bloqueador, gates locais executados no Node suportado e nenhuma ação fora do escopo autorizado.
+- Runtime local de verificação: Node portátil v24.22.0; executar `pnpm test:unit`, os dois testes sintéticos `tests/integration/ai-text-api.test.ts` e `tests/integration/ai-text-concurrency.test.ts`, E2E `tests/e2e/ai-text-flow.spec.ts`, `pnpm typecheck`, `pnpm lint`, os três builds diretos dos apps e `git diff --check`.
+- Não executar o conjunto completo `tests/integration/**`: todos os outros testes importam `tests/helpers/local-db.ts` ou `tests/helpers/cycle07-local-db.ts` e abrem banco hospedado/DEV. T4R já está concluída e não deve ser repetida.
+- Não executar todos os E2Es: fora `ai-text-flow.spec.ts`, os specs usam `owner-fixture.ts`, que lê `.local/fixtures.json` e autentica em serviços; esse teste não atende ao limite de não acessar credenciais/serviços no T6.
+- Não executar `pnpm build` na raiz: `scripts/build.mjs` lê `.local/dev.json` quando presente. Em vez disso, executar `pnpm --filter @donos/portal build`, `pnpm --filter @donos/estoque build` e `pnpm --filter @donos/precificacao build`, que chamam Vite diretamente sem configuração ou acesso a serviços.
+- Testes de banco que requeiram instância mutável permanecem fora do T6; executar apenas integrações com dependências em memória.
+
+- [x] **Passo 1: execução integrada local.** Node v24.22.0: unitários 184/184; integrações sintéticas 17/17; E2E mockado 8/8; typecheck, lint, três builds diretos dos apps e `git diff --check` passaram. A primeira inicialização E2E sem configuração sintética falhou antes de autenticar; a execução válida foi repetida com URL/chave fictícias. Detalhes em `docs/evidence/ciclo-07a-task-6.md`.
+- [x] **Passo 2: auditoria independente read-only.** Revisão estática independente encontrou e verificou correções para fornecedor, preço zero, arredondamento do total e underflow; sem acesso a banco mutável. Limites de runtime/RLS estão na evidência.
+- [x] **Passo 3: corrigir achados com teste RED antes do fix.** Foram reproduzidos REDs para preço zero pronto e fornecedor alterável na confirmação; após correção, unitários, integrações e E2E relacionados passaram. O total editado agora é derivado com `BigInt`/strings decimais e exibido separadamente do total original do texto.
+- [x] **Passo 4: registrar evidência e limites.** Evidência diferencia gates unitários, integração em memória, E2E mockado e T4R PostgreSQL anterior. Nenhum provedor real/WhatsApp foi validado; crash abrupto no intervalo pós-dispatch segue risco operacional que demanda recuperação persistente fora deste escopo.
+- [ ] **Passo 5: preparar commits/PR do ciclo.** Atualizar estado e sprint log, preservar T4R em commit(s) dedicados e preparar PR contra o merge do Ciclo 06 somente se as alterações restantes e sua proveniência estiverem delimitadas; não fazer merge/deploy nem iniciar Foto/Voz/WhatsApp.
+
+**Checkpoint final:** evidência, gates locais e revisão independente concluídos; separação dos commits/PR ainda pendente. Nenhuma ação fora do escopo autorizado.
 
 ## Estratégia de agentes e execução
 
@@ -231,4 +246,4 @@
 - Após congelar Task 1 interfaces, subagente pode implementar somente `packages/domain-ai/src/**` e testes unitários desse domínio; outro pode implementar somente `apps/estoque/src/ai/**` e E2E mockado depois de receber os DTOs finais.
 - `InventoryWorkspace.tsx`, `app.ts`, migration, DB e transações não são compartilhados entre escritores; integração fica com o coordenador. Não paralelizar tasks que dependam do DB mutável.
 - Método recomendado: subagent-driven com checkpoints após cada tarefa. O erro em confirmação pode criar movimento ou duplicar custo; contratos e transação centralizados justificam a revisão frequente.
-- Gate humano satisfeito: plano e retenção aprovados em 2026-10-16; implementação de Tarefa 1 iniciada após aprovação. C07-DEV autoriza somente a Tarefa 2 no projeto DEV indicado, com migration aditiva e dados sintéticos; confirmar guard do alvo antes de cada conexão. Aplicar Apple Design skill na Tarefa 5, quando o trabalho de frontend começar.
+- Gate humano satisfeito: plano e retenção aprovados em 2026-10-16; implementação de Tarefa 1 iniciada após aprovação. C07-DEV autoriza somente a Tarefa 2 no projeto DEV indicado, com migration aditiva e dados sintéticos; confirmar guard do alvo antes de cada conexão. Apple Design foi aplicado na Tarefa 5 concluída.

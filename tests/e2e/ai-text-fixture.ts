@@ -53,9 +53,9 @@ export async function openSyntheticAi(page:Page, options:{quota?:boolean; uncert
     }
     if(path.endsWith(`/ai/text/proposals/${aiIds.proposal}`)){
       if(method==='PATCH'){
-        const body=request.postDataJSON() as {supplierId?:string;quantity?:string};
+        const body=request.postDataJSON() as {supplierId?:string;quantity?:string;unitPrice?:string};
         expect(body.supplierId).toBe(aiIds.supplier);
-        proposal={...proposal,version:proposal.version+1,status:'ready',missingFields:[],candidate:{...proposal.candidate,quantity:body.quantity??'5'}};
+        proposal={...proposal,version:proposal.version+1,status:'ready',missingFields:[],candidate:{...proposal.candidate,quantity:body.quantity??'5',unitPrice:body.unitPrice??proposal.candidate.unitPrice}};
       }
       return json(proposal);
     }

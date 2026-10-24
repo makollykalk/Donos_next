@@ -1,8 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { createAiTextService } from '../../apps/api/src/services/ai-text.js';
+import type { AiTextCandidate, AiTextProposalStatus, ContextSelection, CreateReceiptInput, IssueInput } from '@donos/contracts';
+import type { Database, RestaurantContext, Tx, VerifiedActor } from '@donos/db';
+import type { AiTextConfirmationOperations } from '../../apps/api/src/services/ai-text-types.js';
 
-const actor = { userId: randomUUID(), sessionId: randomUUID(), requestId: 'confirm-test' } as any;
+// Authentication is outside this synthetic transaction adapter.
+const actor = { userId: randomUUID(), sessionId: randomUUID(), requestId: 'confirm-test' } as VerifiedActor;
 const orgId = randomUUID();
 const restaurantId = randomUUID();
 const locationId = randomUUID();
@@ -12,10 +16,20 @@ const proposalId = randomUUID();
 const reservationId = randomUUID();
 const contextToken = 'a'.repeat(64);
 const selection = { organizationId: orgId, restaurantId };
-const candidate = { action: 'receipt', ingredientDescription: 'muçarela', quantity: '5', unit: 'kg', totalPrice: '190', unitPrice: '38', reason: null, ambiguous: false, explanations: [] };
+const candidate: AiTextCandidate = { action: 'receipt', ingredientDescription: 'muçarela', quantity: '5', unit: 'kg', totalPrice: '190', unitPrice: '38', reason: null, ambiguous: false, explanations: [] };
+
+type ProposalFixture = {
+  id: string; organization_id: string; restaurant_id: string; location_id: string;
+  actor_user_id: string; operation_key: string; request_hash: string; usage_reservation_id: string;
+  status: AiTextProposalStatus; version: number; candidate_json: AiTextCandidate;
+  review_json: { action: 'receipt' | 'issue'; ingredientId: string; supplierId: string;
+    quantity: string; unit: 'kg'; unitPrice: string; reason: string | null; missingFields: string[] };
+  result_id: string | null; receipt_result_id: string | null; movement_result_id: string | null;
+  created_at: Date; updated_at: Date; terminal_at: Date | null; expires_at: string;
+};
 
 type State = {
-  proposal: any;
+  proposal: ProposalFixture;
   reservation: { status: string; actualUnits: string | null };
   balance: { quantity: string; value: string };
   movements: Array<{ kind: string; quantity: string; value: string }>;
@@ -73,8 +87,8 @@ function transactionalDb(options: { action?: 'receipt' | 'issue'; reason?: strin
       const matches = values[0] === orgId && values[1] === restaurantId && values[2] === proposalId && values[6] === state.proposal.version;
       if (!matches || state.proposal.status !== 'ready') return { rows: [], rowCount: 0 };
       state.proposal.status = 'confirmed'; state.proposal.version++;
-      state.proposal.receipt_result_id = values[3] === 'confirmed' ? (values[4] ?? null) : null;
-      state.proposal.movement_result_id = values[3] === 'confirmed' ? (values[5] ?? null) : null;
+      state.proposal.receipt_result_id = values[3] === 'confirmed' ? nullableId(values[4]) : null;
+      state.proposal.movement_result_id = values[3] === 'confirmed' ? nullableId(values[5]) : null;
       state.proposal.result_id = state.proposal.receipt_result_id ?? state.proposal.movement_result_id;
       state.proposal.terminal_at = new Date(); state.proposal.updated_at = new Date();
       return { rows: [{ ...state.proposal }], rowCount: 1 };
@@ -86,23 +100,24 @@ function transactionalDb(options: { action?: 'receipt' | 'issue'; reason?: strin
     }
     return { rows: [], rowCount: 1 };
   } };
-  const database = { withRestaurantTx: async (_actor: unknown, requested: any, _token: string, fn: (ctx: any, tx: any) => Promise<unknown>) => {
+  const database = { withRestaurantTx: async <T>(_actor: VerifiedActor, requested: ContextSelection, _token: string, fn: (ctx: RestaurantContext, tx: Tx) => Promise<T>): Promise<T> => {
     let release!: () => void;
     const previous = queue;
     queue = new Promise<void>(resolve => { release = resolve; });
     await previous;
     const saved = snapshot();
-    try { return await fn({ ...requested, actor }, tx); }
+    // The query dispatcher models only statements exercised by confirmation.
+    try { return await fn({ ...requested, actor }, tx as unknown as Tx); }
     catch (error) { restore(saved); throw error; }
     finally { release(); }
-  } } as any;
+  } } satisfies Pick<Database, 'withRestaurantTx'>;
   const operations = {
     settleUsage: async (_ctx: unknown, id: string, units: string, _tx: unknown) => {
       if (id !== reservationId || units !== '1') throw new Error('unexpected reservation settlement');
       if (state.reservation.status !== 'settled') state.reservation = { status: 'settled', actualUnits: units };
       state.settlementCount++;
     },
-    draftReceipt: async (_ctx: unknown, input: any, _tx: unknown) => {
+    draftReceipt: async (_ctx: RestaurantContext, input: CreateReceiptInput, _tx: Tx) => {
       expect(input.items[0]).toMatchObject({ ingredientId, quantity: '5', unitPrice: '38', unit: { kind: 'standard', code: 'kg' } });
       expect(input.supplierId).toBe(supplierId);
       const receipt = { id: randomUUID(), status: 'draft', items: [] };
@@ -116,7 +131,7 @@ function transactionalDb(options: { action?: 'receipt' | 'issue'; reason?: strin
       state.priceHistory.push({ unitPrice: '38' });
       return receipt;
     },
-    issueStock: async (_ctx: unknown, input: any, _key: string, _tx: unknown) => {
+    issueStock: async (_ctx: RestaurantContext, input: IssueInput, _key: string, _tx: Tx) => {
       if (!input.reason?.trim()) throw Object.assign(new Error('reason required'), { code: 'VALIDATION_ERROR' });
       if (BigInt(input.quantity) > BigInt(state.balance.quantity)) throw Object.assign(new Error('not enough stock'), { code: 'INSUFFICIENT_STOCK' });
       state.movements.push({ kind: 'ISSUE', quantity: input.quantity, value: '0' });
@@ -124,7 +139,14 @@ function transactionalDb(options: { action?: 'receipt' | 'issue'; reason?: strin
       return { movementId: randomUUID(), balance: { ...state.balance } };
     },
   };
-  return { database, state, operations };
+  // Keep partial DTOs at this adapter boundary: domain operations are stubs here.
+  return { database: database as Database, state, operations: operations as unknown as AiTextConfirmationOperations };
+}
+
+function nullableId(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== 'string') throw new Error('expected synthetic result ID');
+  return value;
 }
 
 const args = { actor, selection, contextToken };
@@ -132,12 +154,11 @@ const args = { actor, selection, contextToken };
 describe('AI text proposal confirmation transaction', () => {
   it('does not move stock until explicit confirmation, then receives 5 kg at R$38/kg', async () => {
     const fake = transactionalDb();
-    const service = createAiTextService(fake.database, undefined, fake.operations as any);
+    const service = createAiTextService(fake.database, undefined, fake.operations);
     expect(fake.state.balance).toEqual({ quantity: '0', value: '0' });
     expect(fake.state.movements).toHaveLength(0);
-    const result = await service.confirmProposal(args, proposalId, { expectedVersion: 4, confirmed: true }, randomUUID()) as any;
-    expect(result.proposal.status).toBe('confirmed');
-    expect(result.result.status).toBe('received');
+    const result = await service.confirmProposal(args, proposalId, { expectedVersion: 4, confirmed: true }, randomUUID());
+    expect(result).toMatchObject({ proposal: { status: 'confirmed' }, result: { status: 'received' } });
     expect(fake.state.balance).toEqual({ quantity: '5', value: '190' });
     expect(fake.state.priceHistory).toEqual([{ unitPrice: '38' }]);
     expect(fake.state.movements).toHaveLength(1);
@@ -146,13 +167,13 @@ describe('AI text proposal confirmation transaction', () => {
 
   it('requires a reason for an issue and keeps insufficient stock blocked', async () => {
     const missingReason = transactionalDb({ action: 'issue', reason: null, initialStock: '10' });
-    const missingService = createAiTextService(missingReason.database, undefined, missingReason.operations as any);
+    const missingService = createAiTextService(missingReason.database, undefined, missingReason.operations);
     await expect(missingService.confirmProposal(args, proposalId, { expectedVersion: 4, confirmed: true }, randomUUID()))
       .rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
     expect(missingReason.state.movements).toHaveLength(0);
 
     const insufficient = transactionalDb({ action: 'issue', reason: 'Perda na preparação' });
-    const service = createAiTextService(insufficient.database, undefined, insufficient.operations as any);
+    const service = createAiTextService(insufficient.database, undefined, insufficient.operations);
     await expect(service.confirmProposal(args, proposalId, { expectedVersion: 4, confirmed: true }, randomUUID()))
       .rejects.toMatchObject({ code: 'INSUFFICIENT_STOCK' });
     expect(insufficient.state.balance.quantity).toBe('0');
@@ -161,14 +182,14 @@ describe('AI text proposal confirmation transaction', () => {
 
   it('replays the original response and allows at most one movement for concurrent distinct keys', async () => {
     const fake = transactionalDb();
-    const service = createAiTextService(fake.database, undefined, fake.operations as any);
+    const service = createAiTextService(fake.database, undefined, fake.operations);
     const key = randomUUID();
     const first = await service.confirmProposal(args, proposalId, { expectedVersion: 4, confirmed: true }, key);
     expect(await service.confirmProposal(args, proposalId, { expectedVersion: 4, confirmed: true }, key)).toEqual(first);
     expect(fake.state.movements).toHaveLength(1);
 
     const concurrent = transactionalDb();
-    const parallelService = createAiTextService(concurrent.database, undefined, concurrent.operations as any);
+    const parallelService = createAiTextService(concurrent.database, undefined, concurrent.operations);
     const settled = await Promise.allSettled([
       parallelService.confirmProposal(args, proposalId, { expectedVersion: 4, confirmed: true }, randomUUID()),
       parallelService.confirmProposal(args, proposalId, { expectedVersion: 4, confirmed: true }, randomUUID()),
@@ -179,20 +200,20 @@ describe('AI text proposal confirmation transaction', () => {
 
   it('rejects stale, terminal, and cross-tenant confirmation without another movement', async () => {
     const stale = transactionalDb();
-    const staleService = createAiTextService(stale.database, undefined, stale.operations as any);
+    const staleService = createAiTextService(stale.database, undefined, stale.operations);
     await expect(staleService.confirmProposal(args, proposalId, { expectedVersion: 3, confirmed: true }, randomUUID()))
       .rejects.toMatchObject({ code: 'RESOURCE_CONFLICT' });
     expect(stale.state.movements).toHaveLength(0);
 
     const terminal = transactionalDb();
     terminal.state.proposal.status = 'discarded';
-    const terminalService = createAiTextService(terminal.database, undefined, terminal.operations as any);
+    const terminalService = createAiTextService(terminal.database, undefined, terminal.operations);
     await expect(terminalService.confirmProposal(args, proposalId, { expectedVersion: 4, confirmed: true }, randomUUID()))
       .rejects.toMatchObject({ code: 'RESOURCE_CONFLICT' });
     expect(terminal.state.movements).toHaveLength(0);
 
     const crossTenant = transactionalDb();
-    const tenantService = createAiTextService(crossTenant.database, undefined, crossTenant.operations as any);
+    const tenantService = createAiTextService(crossTenant.database, undefined, crossTenant.operations);
     await expect(tenantService.confirmProposal({ ...args, selection: { ...selection, organizationId: randomUUID() } }, proposalId,
       { expectedVersion: 4, confirmed: true }, randomUUID())).rejects.toMatchObject({ code: 'RESOURCE_NOT_FOUND' });
     expect(crossTenant.state.movements).toHaveLength(0);
@@ -200,7 +221,7 @@ describe('AI text proposal confirmation transaction', () => {
 
   it('rolls back movement, balance, price, reservation settlement, proposal, receipt draft, and audit together', async () => {
     const fake = transactionalDb({ failAfterAudit: true, reservationStatus: 'pending_reconciliation' });
-    const service = createAiTextService(fake.database, undefined, fake.operations as any);
+    const service = createAiTextService(fake.database, undefined, fake.operations);
     await expect(service.confirmProposal(args, proposalId, { expectedVersion: 4, confirmed: true }, randomUUID()))
       .rejects.toThrow('synthetic failure after movement and audit');
     expect(fake.state).toMatchObject({

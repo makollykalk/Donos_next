@@ -1,6 +1,6 @@
 # Estado do projeto DONOS Next
 
-Atualizado em 2026-10-16.
+Atualizado em 2026-10-23.
 
 ## Ciclo atual
 
@@ -12,19 +12,19 @@ Atualizado em 2026-10-16.
 
 ## Próximo subciclo
 
-- **Ciclo 07A — proposta de estoque por texto no App 01:** spec, plano TDD e política de retenção aprovados pelo usuário. Tarefas 1–3 concluídas e revisadas; Tarefa 4 implementada no commit `e20b634` nesta branch `codex/ciclo-07-ai-text`, mas seu gate de revisão permanece aberto por falta de prova em PostgreSQL real.
+- **Ciclo 07A — proposta de estoque por texto no App 01:** spec, plano TDD e política de retenção aprovados pelo usuário. Tarefas 1–3 concluídas e revisadas; T4R passou 5/5 em PostgreSQL C07-DEV como `donos_api` e teve revisão independente PASS; T5 foi entregue em `bf1e69d` e teve revisão independente PASS. T6 teve gates locais aprovados (unitários 184/184, integração sintética 17/17, E2E mockado 8/8, typecheck, lint e três builds diretos), seguida de revisão independente estática PASS; preparação de commits/PR pendente. Evidências: [T5](evidence/ciclo-07a-task-5.md), [T6](evidence/ciclo-07a-task-6.md).
 - Escopo da spec: uma ação/um insumo por proposta, mock determinístico apenas em desenvolvimento/testes, confirmação explícita e medidor existente `ai_text_whatsapp`; não autoriza integração real, WhatsApp ou uso remoto.
-- A spec está em [2026-10-16-ai-text-in-app-design.md](superpowers/specs/2026-10-16-ai-text-in-app-design.md), o plano em [2026-10-16-ai-text-in-app.md](superpowers/plans/2026-10-16-ai-text-in-app.md) e ADR [0006](adr/0006-ai-text-in-app.md). Tarefa 1: commits `72625a6` a `9dc0f20`, review round 2 limpo. Tarefa 2: migrations aditivas autorizadas em C07-DEV, revisão limpa. Tarefa 3: commit `42e6e58`, revisão limpa após duas rodadas de correções. Tarefa 4: commit `e20b634`; os testes focados e unitários passam, porém a revisão independente mantém o gate aberto até validar concorrência/rollback com Postgres descartável. Não iniciar Tarefa 5 antes disso.
-- Política aprovada: dados estruturados de proposta removidos 30 dias após estado terminal; propostas abertas expiram em 30 dias da criação. Aplicar Apple Design skill ao iniciar frontend (Tarefa 5).
+- A spec está em [2026-10-16-ai-text-in-app-design.md](superpowers/specs/2026-10-16-ai-text-in-app-design.md), o plano em [2026-10-16-ai-text-in-app.md](superpowers/plans/2026-10-16-ai-text-in-app.md) e ADR [0006](adr/0006-ai-text-in-app.md). Tarefa 1: commits `72625a6` a `9dc0f20`, review round 2 limpo. Tarefa 2: migrations aditivas autorizadas em C07-DEV, revisão limpa. Tarefa 3: commit `42e6e58`, revisão limpa após duas rodadas de correções. Tarefa 4: commit `e20b634` mais prova T4R runtime 5/5 e revisão independente final PASS, documentadas em [evidência](evidence/ciclo-07a-task-4.md). Tarefa 5: commit `bf1e69d`, E2E sintético 8/8, typecheck, build App 01 e revisão independente PASS, em [evidência](evidence/ciclo-07a-task-5.md).
+- Política aprovada: dados estruturados de proposta removidos 30 dias após estado terminal; propostas abertas expiram em 30 dias da criação. A Apple Design skill foi aplicada na Tarefa 5.
 - Tarefa 2 aplicada somente no Supabase DONOS Next DEV `kfthwjrvgslnsjigqnyc`: migrations `20261016190345_cycle07_ai_text_proposals` e `20261016190427_cycle07_ai_proposal_reservation_fk_index`; sem reset, produção, legado, deploy ou integração paga. Replay desde DB local vazio segue pendente.
 
-## Gate atual da Tarefa 4
+## Resultado da Tarefa 4/T4R e checkpoint atual
 
-- Branch ativa: `codex/ciclo-07-ai-text`, commit da Tarefa 4 `e20b634`. Nenhuma alteração de código pendente após esse commit; esta sessão atualiza apenas a documentação de estado/evidência.
-- Tarefa 4: `pnpm exec vitest run --config vitest.integration.config.ts tests/integration/ai-text-api.test.ts tests/integration/ai-text-concurrency.test.ts` passou 17/17; `pnpm test:unit` passou 178/178; `pnpm typecheck` e `git diff --check` passaram.
-- Revisão independente: NEEDS FIXES no gate de prova, sem defeito de código identificado. A concorrência e o rollback são modelados por adapter em memória e operações stub; não provam locks, RLS, ledger ou rollback SQL real. Evidência em [Ciclo 07A Tarefa 4](evidence/ciclo-07a-task-4.md).
-- O fundador aprovou preparar revisão do plano para usar alvo de teste isolado e explicitamente guardado. A proposta de Tarefa 4R está em [ADR-0007](adr/0007-cycle-07a-task-4-test-target.md) e no plano; aguarda revisão humana. Nenhum teste remoto foi executado nesta emenda.
-- Próximo passo: revisar/aprovar a emenda T4R, depois executar somente o alvo nela previsto. Tarefa 5 não iniciada.
+- Branch ativa: `codex/ciclo-07-ai-text`, commit atual de UI `bf1e69d`; implementação inicial da Tarefa 4 em `e20b634`. A prova T4R e os ajustes associados de teste/documentação permanecem sem commit e foram preservados fora do commit de UI.
+- Execução final T4R: Node portátil v24.22.1, DEV autorizado `kfthwjrvgslnsjigqnyc`, usuário runtime `donos_api`, preflight `READ ONLY`, cinco cenários aprovados (5/5). Gates locais: foco 17/17, unitários 180/180, `pnpm typecheck`, TSC dos testes e `git diff --check` passaram.
+- Revisão independente final: PASS. Cobriu concorrência, idempotência, erro por saldo, rollback após operação real, isolamento entre tenants e coerência da evidência. Ver [evidência da Tarefa 4](evidence/ciclo-07a-task-4.md).
+- Para satisfazer os pré-requisitos dos atores sintéticos, foram autorizados e criados no DEV apenas entitlement/cota simulados para A e assinatura/entitlements simulados para B; B não recebeu cota. O bucket de teste A foi ajustado dentro da autorização. Nenhuma migration, reset, produção, deploy ou cobrança foi executada. Registros sintéticos são permanentes e estão inventariados na evidência.
+- Tarefa 4/T4R e Tarefa 5 estão concluídas nos respectivos gates. A Tarefa 6 não acessou banco, Auth, `.local` ou provedores reais; corrigiu fornecedor mutável após revisão, preço zero pronto e total desatualizado na UI. O risco de crash abrupto pós-dispatch segue aberto para recuperação operacional. Não houve deploy ou alteração no legado/produção. Revisão final e commits/PR T6 pendentes.
 
 ## Base do ciclo e estado geral
 

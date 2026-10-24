@@ -1,15 +1,15 @@
-import {expect,test} from '@playwright/test';
+import {expect,test,type Page} from '@playwright/test';
 import type {AiTextProposal,AiTextProposalReview} from '@donos/contracts';
 import {aiIds,canonicalText,openSyntheticAi} from './ai-text-fixture.js';
 
-async function generate(page:import('@playwright/test').Page){
+async function generate(page:Page){
   const workspace=page.getByRole('region',{name:'Estoque por texto'});
   await expect(workspace).toBeVisible();
   await workspace.getByRole('textbox',{name:'Descreva a entrada ou baixa'}).fill(canonicalText);
   await workspace.getByRole('button',{name:'Gerar proposta',exact:true}).click();
   return workspace;
 }
-async function ready(page:import('@playwright/test').Page){
+async function ready(page:Page){
   const workspace=await generate(page);
   await workspace.getByLabel('Fornecedor da proposta').selectOption(aiIds.supplier);
   await workspace.getByRole('button',{name:'Salvar revisão'}).click();
@@ -62,7 +62,7 @@ test('saved review with lost PATCH response reconciles by GET and the frozen ide
   expect(mock.confirms).toHaveLength(0);
   await workspace.getByRole('button',{name:'Confirmar entrada de 6 kg de Farinha'}).click();
   await expect(workspace.getByRole('status')).toContainText('Entrada confirmada');
-  expect(mock.confirms[0]?.body).toEqual({expectedVersion:2,confirmed:true,supplierId:aiIds.supplier});
+  expect(mock.confirms[0]?.body).toEqual({expectedVersion:2,confirmed:true});
 });
 
 for(const foreignField of ['organizationId','restaurantId'] as const){
@@ -85,19 +85,22 @@ for(const foreignField of ['organizationId','restaurantId'] as const){
 test('receipt requires supplier review and explicit confirmation, then displays the result envelope',async({page})=>{
   const mock=await openSyntheticAi(page);
   const workspace=await generate(page);
-  await expect(workspace.getByText('Total interpretado: R$ 190',{exact:true})).toBeVisible();
+  await expect(workspace.getByText('Total do texto: R$ 190',{exact:true})).toBeVisible();
   await expect(workspace.getByLabel('Preço unitário da proposta')).toHaveValue('38');
-  await expect(workspace.getByRole('button',{name:'Confirmar entrada de 5 kg de Farinha'})).toBeDisabled();
+  await workspace.getByLabel('Quantidade da proposta').fill('6');
+  await workspace.getByLabel('Preço unitário da proposta').fill('40');
+  await expect(workspace.getByText('Total para confirmar: R$ 240',{exact:true})).toBeVisible();
+  await expect(workspace.getByRole('button',{name:'Confirmar entrada de 6 kg de Farinha'})).toBeDisabled();
   expect(mock.confirms).toHaveLength(0);
   await workspace.getByLabel('Fornecedor da proposta').selectOption(aiIds.supplier);
   await workspace.getByRole('button',{name:'Salvar revisão'}).click();
   await expect(workspace.getByLabel('Fornecedor da proposta')).toHaveValue(aiIds.supplier);
   expect(mock.confirms).toHaveLength(0);
-  await workspace.getByRole('button',{name:'Confirmar entrada de 5 kg de Farinha'}).click();
+  await workspace.getByRole('button',{name:'Confirmar entrada de 6 kg de Farinha'}).click();
   await expect(workspace.getByRole('status')).toContainText('Entrada confirmada');
   await expect(workspace).toContainText(aiIds.result);
   expect(mock.confirms).toHaveLength(1);
-  expect(mock.confirms[0]?.body).toEqual({expectedVersion:2,confirmed:true,supplierId:aiIds.supplier});
+  expect(mock.confirms[0]?.body).toEqual({expectedVersion:2,confirmed:true});
   expect(mock.confirms[0]?.key).toBeTruthy();
   expect(mock.unexpected).toEqual([]);
 });

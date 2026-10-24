@@ -53,7 +53,10 @@ export function validateInventoryCandidate(
   if (!selection.locationId) missing.add('location');
   if (candidate.action === 'receipt' && !selection.supplierId) missing.add('supplier');
   if (candidate.action === 'issue' && !candidate.reason) missing.add('reason');
-  if (candidate.action === 'receipt' && !candidate.unitPrice && !candidate.totalPrice) missing.add('price');
+  const hasPositivePrice = candidate.unitPrice !== null
+    ? candidate.unitPrice !== '0'
+    : candidate.totalPrice !== null && candidate.totalPrice !== '0';
+  if (candidate.action === 'receipt' && !hasPositivePrice) missing.add('price');
   const matches = candidate.ingredientDescription
     ? catalog.filter(entry => entry.active && normalizeName(entry.name) === normalizeName(candidate.ingredientDescription!))
     : [];
@@ -67,6 +70,10 @@ export function validateInventoryCandidate(
   let unitPrice = candidate.unitPrice ?? (candidate.action === 'receipt' && candidate.totalPrice && candidate.quantity && candidate.quantity !== '0'
     ? unitPriceFromTotal(candidate.totalPrice, candidate.quantity) : null);
   if (unitPrice !== null && !PriceStringSchema.safeParse(unitPrice).success) {
+    unitPrice = null;
+    missing.add('price');
+  }
+  if (candidate.action === 'receipt' && unitPrice === '0') {
     unitPrice = null;
     missing.add('price');
   }

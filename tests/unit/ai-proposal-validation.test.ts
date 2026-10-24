@@ -44,7 +44,9 @@ describe('validateInventoryCandidate', () => {
 
   it('uses half-even rounding at twelve decimal places', () => {
     expect(validateInventoryCandidate(candidate({ quantity: '3', totalPrice: '1' }), catalog, selected).unitPrice).toBe('0.333333333333');
-    expect(validateInventoryCandidate(candidate({ quantity: '2000000000000', totalPrice: '1' }), catalog, selected).unitPrice).toBe('0');
+    const unrepresentable = validateInventoryCandidate(candidate({ quantity: '2000000000000', totalPrice: '1' }), catalog, selected);
+    expect(unrepresentable.unitPrice).toBeNull();
+    expect(unrepresentable.status).toBe('needs_review');
     expect(validateInventoryCandidate(candidate({ quantity: '2000000000000', totalPrice: '3' }), catalog, selected).unitPrice).toBe('0.000000000002');
   });
 
@@ -59,5 +61,19 @@ describe('validateInventoryCandidate', () => {
     const result = validateInventoryCandidate(candidate({ totalPrice: null, unitPrice: null }), catalog, { locationId: 'location-1' });
     expect(result.missingFields).toEqual(expect.arrayContaining(['supplier', 'price']));
     expect(result.status).toBe('needs_review');
+  });
+
+  it('does not mark zero-cost receipts ready because AI review has no zero-cost reason field', () => {
+    const result = validateInventoryCandidate(candidate({ totalPrice: '0', unitPrice: null }), catalog, selected);
+    expect(result.status).toBe('needs_review');
+    expect(result.missingFields).toContain('price');
+    expect(result.unitPrice).toBeNull();
+  });
+
+  it('allows a positive reviewed unit price to correct an extracted zero total', () => {
+    const result = validateInventoryCandidate(candidate({ totalPrice: '0', unitPrice: '1' }), catalog, selected);
+    expect(result.status).toBe('ready');
+    expect(result.unitPrice).toBe('1');
+    expect(result.missingFields).toEqual([]);
   });
 });

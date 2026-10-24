@@ -14,6 +14,7 @@ Atualizado em 2026-10-16. DEC-001 a DEC-013 permanecem conforme a V3. Este docum
 | C06-DEV | Autorizar exclusivamente testes e migrations aditivas no Supabase DONOS Next DEV `kfthwjrvgslnsjigqnyc`; produção, legado e deploy continuam proibidos. | Fundador, 2026-10-16 | Aprovação explícita na sessão do Ciclo 06 |
 | C07-TEXT | Protótipo de texto no App 01: uma ação/um insumo por proposta; reutiliza `ai_text_whatsapp` como entitlement/medidor sem habilitar WhatsApp; mock apenas em desenvolvimento/testes. | Fundador, 2026-10-16 | [ADR-0006](adr/0006-ai-text-in-app.md), spec do Ciclo 07A |
 | C07-DEV | Autorizar migrations aditivas e testes com fixtures sintéticas do Ciclo 07A exclusivamente no Supabase DONOS Next DEV `kfthwjrvgslnsjigqnyc`; sem reset, produção, legado, deploy ou integrações pagas. | Fundador, 2026-10-16 | Aprovação explícita nesta sessão |
+| DEV-TEST-FALLBACK | Para testes do DONOS Next que precisem de PostgreSQL, o banco DEV autorizado pode substituir um banco descartável local indisponível. Usar somente o DEV aprovado para o ciclo, dados sintéticos e escopo declarado; sem reset. Migrations continuam exigindo autorização própria. A prova de API/RLS deve usar o papel/runtime da aplicação; execução administrativa via conector não substitui essa prova. | Fundador, 2026-10-16 | Instrução explícita nesta sessão |
 
 ## Pendências relevantes
 

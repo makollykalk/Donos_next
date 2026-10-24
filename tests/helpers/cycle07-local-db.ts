@@ -1,4 +1,4 @@
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, realpathSync } from 'node:fs';
 import { isAbsolute, relative, resolve, sep } from 'node:path';
 import { createClient } from '@supabase/supabase-js';
 import pg from 'pg';
@@ -13,12 +13,35 @@ export type Cycle07TargetInput = Readonly<{
   supabaseUrl: string;
   databaseUrl: string;
   configDirectory: string;
+  credentialFiles?: readonly string[] | undefined;
   workspaceRoot: string;
 }>;
 
 function isWithin(parent: string, child: string): boolean {
   const rel = relative(resolve(parent), resolve(child));
   return rel === '' || (rel !== '..' && !rel.startsWith(`..${sep}`) && !isAbsolute(rel));
+}
+
+function assertCredentialPaths(workspacePath: string, configPath: string, credentialFiles: readonly string[] = []): void {
+  let workspaceRoot: string;
+  let configDirectory: string;
+  try {
+    workspaceRoot = realpathSync(workspacePath);
+    configDirectory = realpathSync(configPath);
+  } catch {
+    throw new Error('Cycle 07 credentials directory must exist and resolve outside the code worktree');
+  }
+  if (isWithin(workspaceRoot, configDirectory)) {
+    throw new Error('Cycle 07 credentials must remain outside the code worktree');
+  }
+  for (const filePath of credentialFiles) {
+    let credentialFile: string;
+    try { credentialFile = realpathSync(filePath); }
+    catch { throw new Error('Cycle 07 credential files must exist and resolve outside the code worktree'); }
+    if (isWithin(workspaceRoot, credentialFile)) {
+      throw new Error('Cycle 07 credential files must remain outside the code worktree');
+    }
+  }
 }
 
 export function assertCycle07Target(input: Cycle07TargetInput): void {
@@ -43,9 +66,7 @@ export function assertCycle07Target(input: Cycle07TargetInput): void {
     || !database.password) {
     throw new Error('Cycle 07 database target is not the approved DEV pooler/database');
   }
-  if (isWithin(input.workspaceRoot, input.configDirectory)) {
-    throw new Error('Cycle 07 credentials must remain outside the code worktree');
-  }
+  assertCredentialPaths(input.workspaceRoot, input.configDirectory, input.credentialFiles);
 }
 
 type DevSettings = { projectRef: string; supabaseUrl: string; publishableKey: string; databaseUrl: string };
@@ -61,6 +82,7 @@ function loadCycle07Config() {
   if (![devFile, fixturesFile, caFile].every(existsSync)) {
     throw new Error('Cycle 07 DEV config, synthetic fixtures, or CA certificate is missing');
   }
+  assertCredentialPaths(process.cwd(), configDirectory, [devFile, fixturesFile, caFile]);
   const settings = JSON.parse(readFileSync(devFile, 'utf8')) as DevSettings;
   assertCycle07Target({
     requestedProjectRef,

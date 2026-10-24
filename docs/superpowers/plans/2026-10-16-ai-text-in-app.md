@@ -236,9 +236,9 @@
 - [x] **Passo 2: auditoria independente read-only.** Revisão estática independente encontrou e verificou correções para fornecedor, preço zero, arredondamento do total e underflow; sem acesso a banco mutável. Limites de runtime/RLS estão na evidência.
 - [x] **Passo 3: corrigir achados com teste RED antes do fix.** Foram reproduzidos REDs para preço zero pronto e fornecedor alterável na confirmação; após correção, unitários, integrações e E2E relacionados passaram. O total editado agora é derivado com `BigInt`/strings decimais e exibido separadamente do total original do texto.
 - [x] **Passo 4: registrar evidência e limites.** Evidência diferencia gates unitários, integração em memória, E2E mockado e T4R PostgreSQL anterior. Nenhum provedor real/WhatsApp foi validado; crash abrupto no intervalo pós-dispatch segue risco operacional que demanda recuperação persistente fora deste escopo.
-- [ ] **Passo 5: preparar commits/PR do ciclo.** Atualizar estado e sprint log, preservar T4R em commit(s) dedicados e preparar PR contra o merge do Ciclo 06 somente se as alterações restantes e sua proveniência estiverem delimitadas; não fazer merge/deploy nem iniciar Foto/Voz/WhatsApp.
+- [x] **Passo 5: preparar commits/PR do ciclo.** T4R está em commit próprio `16ea596`; integração/correções T6 em `b1c145d`. PR draft #7 aberto contra `codex/ciclo-04-stock-locations-audit` e atualizado no estado/log. Não houve merge/deploy nem início de Foto/Voz/WhatsApp.
 
-**Checkpoint final:** evidência, gates locais e revisão independente concluídos; separação dos commits/PR ainda pendente. Nenhuma ação fora do escopo autorizado.
+**Checkpoint final:** evidência, gates locais, revisão independente e PR draft concluídos. A aprovação humana e o merge permanecem fora deste checkpoint; nenhum deploy ou próxima modalidade foi iniciada.
 
 ## Estratégia de agentes e execução
 

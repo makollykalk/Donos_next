@@ -4,6 +4,7 @@
 **Branch:** `codex/ciclo-07-ai-text`
 **Base do ciclo:** merge do Ciclo 06 `d8a9f51`
 **Runtime:** Node portátil v24.22.0 (`>=24.22.0 <25`)
+**Commits:** T4R `16ea596`; T6 `b1c145d`. [PR draft #7](https://github.com/makollykalk/Donos_next/pull/7), ainda não merged.
 
 ## Escopo executado
 
@@ -36,4 +37,4 @@ O primeiro E2E tentou usar o servidor Vite sem variáveis de ambiente sintética
 
 ## Resultado
 
-Gates locais e revisão independente estática pós-correção aprovados. A separação/integração dos commits da T4R e T6 ainda deve ser concluída antes de abrir PR. Nenhum merge, deploy ou início de Foto/Voz/WhatsApp está autorizado por esta evidência.
+Gates locais e revisão independente estática pós-correção aprovados; commits T4R/T6 estão separados e o PR draft #7 está aberto. Nenhum merge, deploy ou início de Foto/Voz/WhatsApp foi autorizado por esta evidência.

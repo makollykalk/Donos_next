@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {normalizeDecimalInput,formatRatio} from '../../apps/estoque/src/inventory/decimal-input.js';
+import {normalizeDecimalInput,formatRatio,multiplyDecimalStrings} from '../../apps/estoque/src/inventory/decimal-input.js';
 import {ContextStore,StaleContextError} from '@donos/auth-client';
 import type {ApiClient} from '@donos/auth-client';
 import type {SelectedContext} from '@donos/contracts';
@@ -19,6 +19,13 @@ describe('inventory UI decimal strings',()=>{
   expect(formatRatio({numerator:'1.005',denominator:'1'})).toBe('1,00');
   expect(formatRatio({numerator:'1.015',denominator:'1'})).toBe('1,02');
   expect(formatRatio(null)).toBe('—');
+ });
+ it('multiplies decimal strings exactly for reviewed receipt totals',()=>{
+  expect(multiplyDecimalStrings('6','40')).toBe('240');
+  expect(multiplyDecimalStrings('0.125','0.4')).toBe('0.05');
+  expect(multiplyDecimalStrings('999999999999999999.999999','999999999999.999999999999')).toBe('999999999999999999999998000000');
+  expect(multiplyDecimalStrings('1.5','0.000000000001')).toBe('0.000000000002');
+  expect(multiplyDecimalStrings('0.000001','0.000000000001')).toBeNull();
  });
 });
 it('discards pages from an older filter and serializes pagination per query',()=>{

@@ -7,3 +7,5 @@ export * from './shopping.js';
 export * from './shopping-schemas.js';
 export * from './recipes.js';
 export * from './recipe-schemas.js';
+export * from './ai-schemas.js';
+export * from './ai.js';

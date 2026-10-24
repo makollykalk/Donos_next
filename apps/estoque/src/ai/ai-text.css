@@ -1,0 +1,25 @@
+.ai-text-workspace{font:400 1rem/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#172b36;background:#f6f9fc;border:1px solid #bccbd6;border-radius:1rem;padding:clamp(1rem,3vw,1.75rem);margin-block:1.5rem;max-width:60rem;overflow-wrap:anywhere;color-scheme:light}
+.ai-text-workspace *{box-sizing:border-box}
+.ai-text-workspace .ai-heading{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.ai-text-workspace h3,.ai-text-workspace h4{margin-block:.25rem .75rem;line-height:1.2;letter-spacing:-.02em;font-weight:650}
+.ai-text-workspace h3{font-size:1.5rem}.ai-text-workspace h4{font-size:1.25rem}
+.ai-text-workspace .ai-eyebrow{margin:0;color:#425c6b;font-size:.875rem;font-weight:600;letter-spacing:.03em}
+.ai-text-workspace .ai-location{border:1px solid #bccbd6;border-radius:.5rem;padding:.375rem .75rem;background:#fff}
+.ai-text-workspace label{display:flex;flex-direction:column;gap:.375rem;font-weight:600}
+.ai-text-workspace .ai-source{margin-block:1.25rem}.ai-text-workspace .ai-source span{font-size:.875rem;font-weight:400;color:#425c6b}
+.ai-text-workspace input,.ai-text-workspace select,.ai-text-workspace textarea{min-height:2.75rem;width:100%;font:inherit;color:#172b36;background:#fff;border:1px solid #6d8392;border-radius:.5rem;padding:.625rem .75rem}
+.ai-text-workspace textarea{resize:vertical}
+.ai-text-workspace button{font:600 1rem/1.3 system-ui,sans-serif;min-height:2.75rem;padding:.75rem 1rem;border:1px solid #185a7a;border-radius:.625rem;background:#185a7a;color:#fff;cursor:pointer;transition:background-color .12s ease}
+.ai-text-workspace button:hover:not(:disabled){background:#10425b}
+.ai-text-workspace .ai-secondary{background:#fff;color:#164c67}.ai-text-workspace .ai-secondary:hover:not(:disabled){background:#e7f0f6}
+.ai-text-workspace button:disabled{background:#e3e9ee;border-color:#9aaab6;color:#4d606e;cursor:default}
+.ai-text-workspace :focus-visible{outline:3px solid #005fcc;outline-offset:3px}
+.ai-text-workspace fieldset{border:0;padding:0;margin:0;min-width:0}.ai-text-workspace legend{font-weight:600;margin-bottom:.75rem}
+.ai-text-workspace .ai-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;margin-bottom:1rem}
+.ai-text-workspace .ai-review{border-top:1px solid #bccbd6;margin-top:1rem;padding-top:1rem}
+.ai-text-workspace .ai-actions{display:flex;gap:.75rem;flex-wrap:wrap;margin-top:1rem}
+.ai-text-workspace .ai-alert{padding:1rem;background:#fff4dc;border-left:4px solid #8a5200;color:#593500}
+.ai-text-workspace .ai-status:empty{display:none}.ai-text-workspace .ai-status{font-weight:600}
+@media(max-width:36rem){.ai-text-workspace .ai-fields{grid-template-columns:1fr}.ai-text-workspace .ai-actions button{width:100%}}
+@media(prefers-reduced-motion:reduce){.ai-text-workspace,.ai-text-workspace *{animation:none!important;transition:none!important;transform:none!important;scroll-behavior:auto!important}}
+@media(prefers-contrast:more){.ai-text-workspace{border:2px solid #172b36}.ai-text-workspace input,.ai-text-workspace select,.ai-text-workspace textarea{border-color:#172b36}}

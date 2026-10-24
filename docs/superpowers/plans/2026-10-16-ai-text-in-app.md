@@ -1,0 +1,249 @@
+# Ciclo 07A — Implementação de proposta por texto no App 01
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Use a fresh reviewer at each meaningful gate; the coordinator owns contracts, migrations, services, and integration.
+
+**Goal:** Permitir ao proprietário gerar, corrigir e confirmar uma proposta de recebimento ou baixa por texto, sem alterar estoque antes da confirmação explícita.
+
+**Architecture:** Contratos estritos e extrator determinístico isolado alimentam propostas persistidas com tenant/unidade/local e estado explícito. API reserva entitlement/franquia antes da extração; confirmação compõe proposta, uso, estoque e auditoria no mesmo `Tx`. O mock só roda em desenvolvimento/testes; a UI do App 01 mantém revisão, acessibilidade e contexto visíveis.
+
+**Tech Stack:** TypeScript, Zod 4.6.7, React, Fastify, PostgreSQL/Supabase, Vitest, Playwright; sem dependência npm nova. A Tarefa 2 usa somente o C07-DEV explicitamente autorizado, pois não existe runtime local neste ambiente.
+
+**Spec:** `docs/superpowers/specs/2026-10-16-ai-text-in-app-design.md`
+
+**Status:** plano e política de retenção aprovados pelo usuário em 2026-10-16. Tarefas 1–3 concluídas e revisadas. Tarefa 4 foi implementada em `e20b634`; seu gate foi fechado pela T4R runtime 5/5 no C07-DEV e revisão independente final PASS em 2026-10-23. Tarefa 5 concluída no commit `bf1e69d` em 2026-10-23 após autorização humana, E2E sintético 8/8, typecheck, build App 01 e revisão independente PASS. Evidência em `docs/evidence/ciclo-07a-task-5.md`.
+
+## Global Constraints
+
+- Usar `ai_text_whatsapp` no protótipo, sem habilitar WhatsApp; uma proposta contém uma ação e um insumo.
+- Nenhum provedor, segredo, chamada paga/remota, deploy, produção ou legado neste subciclo. A única migration remota permitida é a aditiva da Tarefa 2 em C07-DEV, por autorização explícita registrada; nenhum reset ou outra migration remota é permitido.
+- Não executar integração contra `.local/dev.json`/`tests/helpers/local-db.ts`; esse helper genérico aponta para o Supabase DEV hospedado.
+- Antes de qualquer conexão, comprovar o alvo exato: projectRef e URL Supabase iguais a `kfthwjrvgslnsjigqnyc`, e hostname/credencial Postgres vinculados ao mesmo projeto. Tarefa 2 aplicou somente suas migrations aditivas autorizadas; T4R foi executada somente no mesmo C07-DEV via `tests/helpers/cycle07-local-db.ts`, com opt-in explícito e configuração protegida fora do worktree. Qualquer alvo distinto, reset ou nova migration segue proibido.
+- Para a proposta T4, não expor valores de credenciais em logs/saídas, não usar service_role, não acessar outro alvo e não executar alteração persistente até a revisão humana desta emenda. Fixtures devem ser geradas/identificadas para teste; todas as operações reversíveis precisam de rollback ou cleanup comprovado. Nunca apagar ou editar ledger/auditoria append-only para limpeza. Se a prova concorrente exigir resíduo permanente não delimitado, parar e apresentar o plano de resíduo antes de executar.
+- Proprietário, sessão, `organization_id`, `restaurant_id` e local são validados no servidor e RLS; nunca confiar em IDs/políticas retornados pelo extrator.
+- Nunca efetivar movimento antes de confirmação explícita. Ledger append-only, idempotência e rollback completo; sem saldo negativo.
+- Quantidade/dinheiro ficam em strings decimais, unidade-base ou razão exata; sem `number` binário em cálculos críticos.
+- Nenhum dado bruto ou credencial nos logs/browser; sem `service_role` no cliente.
+- Sem dependência nova. Dependência nova futura exige justificativa, versão fixa e lockfile.
+- Resultado de teste só pode ser relatado depois de execução observada. Não declarar integração inteira verde se apenas casos selecionados forem repetidos.
+
+## Review Focus
+
+1. **Prompt injection no texto:** instruções no conteúdo não podem alterar tenant, autorização, confirmação nem criar campos executáveis. Cobrir em `tests/unit/ai-text-extractor.test.ts` e `tests/integration/ai-text-api.test.ts`.
+2. **Preço total vs. unitário e decimal brasileiro:** `5 kg por R$ 190` precisa resultar em `R$ 38/kg` por cálculo exato. Cobrir em `tests/unit/ai-text-extractor.test.ts` e `tests/unit/ai-proposal-validation.test.ts`.
+3. **Fornecedor/insumo/local ausente ou ambíguo:** manter proposta incompleta até correção explícita; nunca inventar cadastro/seleção. Cobrir no domínio, API e `tests/e2e/ai-text-flow.spec.ts`.
+4. **Retries, dispatch interrompido e confirmação concorrente:** mesma chave/versão não pode duplicar chamada mock, uso, movimento ou resultado; timeout pós-dispatch não reenvia automaticamente. Cobrir em `tests/integration/ai-text-api.test.ts` e `tests/integration/ai-text-concurrency.test.ts`.
+5. **Troca de contexto e tenant cruzado:** resposta atrasada ou ID da organização B não pode ser exibido/confirmado pela organização A. Cobrir em `tests/integration/ai-text-tenant-security.test.ts` e E2E de troca de contexto.
+
+---
+
+## Arquivos e interfaces por tarefa
+
+### Tarefa 0 — Baseline e gate de ambiente local
+
+**Arquivos:** nenhum.
+
+**Interfaces:** nenhuma.
+
+- [x] **Passo 1: verificar branch, estado limpo e runtime.** Branch `codex/ciclo-07-ai-text` sobre `d8a9f51`; runtime pnpm Node 24.19.0 abaixo de `>=24.22.0 <25`.
+- [x] **Passo 2: executar baseline unitário.** `pnpm test:unit` passou 150/150 após build/bootstrap do workspace.
+- [x] **Passo 3: comprovar destino local.** Docker, Podman, Postgres e Supabase CLI indisponíveis; loopback 5432/54321/54322 sem serviço.
+- [x] **Checkpoint de ambiente:** não há DB/Auth descartável local (Docker/Podman ausentes; portas loopback livres). Usuário autorizou explicitamente o projeto DEV `kfthwjrvgslnsjigqnyc` para migrations aditivas e fixtures sintéticas da Tarefa 2. O helper da tarefa deverá negar qualquer outro alvo e nenhuma operação de reset será usada.
+
+### Tarefa 1 — Contratos e domínio puro (RED → GREEN)
+
+**Arquivos:**
+
+- Criar `packages/contracts/src/ai-schemas.ts`, `packages/contracts/src/ai.ts`.
+- Modificar `packages/contracts/src/index.ts`.
+- Criar `packages/domain-ai/package.json`, `packages/domain-ai/tsconfig.json`, `packages/domain-ai/src/index.ts`, `packages/domain-ai/src/text-extractor.ts`, `packages/domain-ai/src/proposal-validation.ts`.
+- Modificar `tsconfig.json`, `tsconfig.tests.json`, `vitest.config.ts`, `apps/api/tsconfig.json` e `pnpm-lock.yaml` somente para registrar `@donos/domain-ai`; `vitest.integration.config.ts` herda o alias da config unitária. A dependência `@donos/contracts` é workspace-local e não adiciona pacote externo.
+- Criar `tests/unit/ai-text-contracts.test.ts`, `tests/unit/ai-text-extractor.test.ts`, `tests/unit/ai-proposal-validation.test.ts`.
+
+**Interfaces produzidas:**
+
+- `AiTextAction = 'receipt' | 'issue'`; candidate/proposal action is nullable until the owner resolves ambiguity; status `interpreting | needs_review | ready | confirmed | discarded | reconciliation_required`.
+- `AiTextProposal` contém `id`, `organizationId`, `restaurantId`, `locationId`, `action`, `candidate`, `missingFields`, `status`, `version`, `createdAt`, `updatedAt`, `expiresAt` e `resultId`; não inclui `sourceText` persistido. Candidatos incluem ação, descrição, quantidade/unidade/valores decimais como strings anuláveis, motivo, indicador de ambiguidade e explicações; schema estrito rejeita chaves extras.
+- `extractInventoryText(text: string): AiTextCandidate` é síncrona/determinística; recebe no máximo 2.000 caracteres, retorna somente o DTO de candidato estrito e não acessa rede, SQL, tenant ou autorização.
+- `validateInventoryCandidate(candidate: AiTextCandidate, catalog: readonly InventoryCatalogEntry[], selection: { supplierId?: string; locationId?: string }): ValidatedInventoryProposal` resolve apenas correspondência exata única em catálogo ativo. `InventoryCatalogEntry = { id: string; name: string; baseUnit: 'kg' | 'L' | 'un'; active: boolean }`; resultado contém `ingredientId: string | null`, `unitPrice: string | null`, `missingFields: AiTextMissingField[]` e `status: 'needs_review' | 'ready'`. Preço total é dividido pela quantidade usando inteiros/BigInt e arredondamento half-even para 12 casas decimais; nenhum fornecedor é inferido.
+
+**Interfaces consumidas:** schemas existentes de inventário/unidades e representações de quantidade/preço em `packages/contracts/src/inventory-schemas.ts`.
+
+- [x] **Tarefa 1 concluída:** contratos e domínio puros implementados em RED→GREEN, commit `9dc0f20`; revisão independente round 2 sem findings Important/Critical. Evidência atual: extrator 11/11, unitários 173/173, `pnpm typecheck` e `git diff --check` passaram. Node 24.19.0 ainda abaixo do requisito.
+- [ ] **Passo 4: executar RED.** `pnpm exec vitest run tests/unit/ai-proposal-validation.test.ts`; esperado: falha pelos exports ainda inexistentes.
+- [ ] **Passo 5: implementar schemas e funções.** Manter parser determinístico e separado da validação de catálogo; limitar texto a 2.000 caracteres e uma ação/um insumo.
+- [ ] **Passo 6: executar unitários focados e typecheck.** Rodar os dois arquivos Vitest e `pnpm typecheck`; esperado: todos passam sem mudar contratos de estoque existentes.
+- [ ] **Passo 7: commit.** `feat(ai): define text proposal contracts and parser`.
+
+**Checkpoint:** contrato de proposta congelado; coordenador revisa interfaces antes de paralelizar domínio puro e UI.
+
+### Tarefa 2 — Persistência, RLS e retenção mínima (RED → GREEN)
+
+**Arquivos:**
+
+- Criar `supabase/migrations/20261016190345_cycle07_ai_text_proposals.sql` (o versionamento do executor remoto gerou este timestamp).
+- Criar migration aditiva corretiva `20261016190427_cycle07_ai_proposal_reservation_fk_index.sql` após advisor identificar índice filho ausente para a FK composta da reserva.
+- Criar `packages/db/src/ai-proposal-repository.ts`; exportar em `packages/db/src/index.ts`.
+- Criar `tests/helpers/cycle07-local-db.ts` com guarda que aceita exclusivamente o projectRef/URL DEV `kfthwjrvgslnsjigqnyc`, database `postgres` e configuração protegida fora do repo; recusa qualquer outro projeto/host e não tem caminho de reset. Nunca reutilizar `tests/helpers/local-db.ts`.
+- Criar `tests/integration/ai-proposal-schema.test.ts`, `tests/integration/ai-text-tenant-security.test.ts`.
+
+**Interface produzida:** `aiProposalRepository.insert(ctx,input,tx)`, `get(ctx,id,tx,forUpdate?)`, `updateReview(ctx,id,expectedVersion,input,tx)`, `markTerminal(ctx,id,expectedVersion,result,tx)` e `list(ctx,query,tx)`. Toda consulta recebe `RestaurantContext` e `Tx`; todo SQL é parametrizado.
+
+**Schema proposto:** `core.ai_text_proposals` com UUID, `organization_id`, `restaurant_id`, `location_id`, `actor_user_id`, `operation_key`, `request_hash`, `usage_reservation_id`, `status`, `version`, candidato/revisão em JSONB com strings decimais, resultado vinculado e timestamps. Não persistir texto bruto nem hash simples do texto de origem, que permitiria tentativa por dicionário. FKs compostas, limites de tamanho, unicidade idempotente e RLS `ENABLE` + `FORCE`.
+
+**Política de retenção aprovada:** não persistir o texto bruto no servidor; mantê-lo somente no estado do formulário durante a revisão. Persistir hash de requisição para idempotência (não hash simples do texto bruto), candidato estruturado, correções do dono, confirmação e IDs de resultado. Apagar a proposta e os dados estruturados 30 dias após confirmação ou descarte; propostas abertas expiram 30 dias após criação. `reconciliation_required` é exceção operacional: permanece disponível e não é apagada automaticamente até confirmação ou descarte pelo dono; após resolução começa a retenção terminal de 30 dias. Se nunca for resolvida, pode permanecer indefinidamente, portanto exige acompanhamento operacional e revisão periódica. A limpeza roda diariamente e nunca toca ledger, auditoria ou estoque. O ledger e a auditoria seguem suas próprias regras e não guardam texto bruto nem cópia integral da proposta. Leituras/confirmações de propostas expiradas são recusadas. A janela de 30 dias foi aprovada antes da Tarefa 1.
+
+- [x] **Passo 1: registrar teste RED de schema e constraints.** RED confirmado antes da migration; teste cobre escopo tenant/unidade/local, estados, unicidade, FKs e grants.
+- [x] **Passo 2: registrar teste RED de RLS.** A/B entre organizações, A1/A2, escrita forjada e lifecycle/versionamento ficam em uma transação que sempre termina em `ROLLBACK`.
+- [x] **Passo 3: executar RED no alvo guardado.** Testes falharam pela tabela ausente sem persistir fixture; alvo exato guardado no helper e C07-DEV autorizado.
+- [x] **Passo 4: implementar migration aditiva e repositório.** RLS `ENABLE` + `FORCE`, grants mínimos, versionamento otimista, FKs tenant/unidade/local/reserva/resultado; sem `SECURITY DEFINER`. Cron diário usa `pg_cron` 1.6.4; purge não toca ledger/auditoria/estoque. `reconciliation_required` é exceção não expirada até resolução e exige revisão operacional se persistir.
+- [x] **Passo 5: aplicar somente migrations aditivas do Ciclo 07A no DEV autorizado.** Aplicadas `20261016190345_cycle07_ai_text_proposals` e `20261016190427_cycle07_ai_proposal_reservation_fk_index`; histórico confirmado antes/depois, sem reset ou outras migrations. Testes sintéticos terminaram sem propostas persistidas.
+- [x] **Passo 6: executar gate RLS/schema.** Integrações schema e tenant passaram; advisor confirmou que não resta FK sem índice nesta tabela.
+- [x] **Passo 7: commit.** `feat(db): persist tenant-scoped ai text proposals` (`4fc3a31`).
+
+**Checkpoint:** não avançar sem RLS/constraints passando e retenção aprovada. O replay integral desde DB local vazio permanece pendente por falta de runtime local; documentar essa limitação, sem resetar ou substituir a prova com o DEV. A autorização C07-DEV cobre somente a migration aditiva e testes sintéticos desta tarefa.
+
+### Tarefa 3 — Serviço de geração, entitlement e rotas (RED → GREEN)
+
+**Arquivos:**
+
+- Criar `apps/api/src/services/ai-text-types.ts`, `apps/api/src/services/ai-text.ts`, `apps/api/src/routes/ai-text.ts`.
+- Modificar `apps/api/src/app.ts`, `apps/api/src/http/security.ts`, `apps/api/package.json`.
+- Criar `tests/integration/ai-text-api.test.ts`.
+
+**Interfaces produzidas:**
+
+- `TextExtractor = (input: { text: string; requestId: string }) => Promise<unknown>`; produção sem implementação configurada retorna `DEPENDENCY_UNAVAILABLE`, sem cair no mock.
+- `createAiTextService(db, extractor)` expõe `createProposal(args, {locationId,text}, key)`, `getProposal(args,id)`, `updateProposal(args,id,input,key)`, `discardProposal(args,id,key)`.
+- Rotas sob `/v1/organizations/:organizationId/restaurants/:restaurantId/inventory/ai/text/proposals` usam `X-Donos-Context`, `Idempotency-Key` e schemas estritos.
+
+**Interfaces consumidas:** contratos da Tarefa 1, `reserveUsage/markUsageDispatched/settleUsage/releaseUsage/markUsageUnknown`, `withRestaurantTx`, repositório da Tarefa 2 e catálogo atual.
+
+- [ ] **Passo 1: escrever testes RED de gate e lifecycle.** Sem `inventory_core`, `ai_text_whatsapp` ou cota: extractor chamado zero vezes; com fixtures válidas: uma reserva, um dispatch, uma proposta; input repetido retorna a mesma proposta; chave com hash/contexto diferente conflita.
+- [ ] **Passo 2: escrever teste RED de falha/recuperação.** Falha antes do dispatch libera uso; timeout após dispatch marca `reconciliation_required`, preserva reserva e não reexecuta extractor; resultado inválido continua sem movimento.
+- [ ] **Passo 3: executar RED focado.** Rodar `pnpm exec vitest run --config vitest.integration.config.ts tests/integration/ai-text-api.test.ts`; esperado: exports/rotas ainda não existem.
+- [ ] **Passo 4: implementar serviço e rotas.** Reservar/dispatch em transações curtas; chamar extrator fora de `retryIdempotent`; revalidar entitlement ao persistir/editar; converter erros em `DomainError` sem vazar conteúdo.
+- [ ] **Passo 5: configurar mock somente em desenvolvimento/testes.** `apps/api/src/server.ts` fornece extrator determinístico apenas quando `NODE_ENV` é `development`/`test`; produção sem configuração responde indisponível e deixa formulário manual disponível.
+- [ ] **Passo 6: executar API/integration e typecheck.** Esperado: gate antes do extractor, sem chamada duplicada e erros esperados; `pnpm typecheck` passa.
+- [ ] **Passo 7: commit.** `feat(api): add gated ai text proposal lifecycle`.
+
+**Checkpoint:** nenhuma chamada de modelo externo; proposta só persiste revisão estruturada e hash, sem texto bruto.
+
+### Tarefa 4 — Confirmação transacional de recebimento/baixa (RED → GREEN)
+
+**Arquivos:**
+
+- Modificar `apps/api/src/services/ai-text.ts`, `apps/api/src/services/ai-text-types.ts`, `apps/api/src/routes/ai-text.ts` se necessário.
+- Modificar `packages/db/src/audit-repository.ts` para ações tipadas de IA ou criar `packages/db/src/ai-audit-repository.ts` se a enumeração existente ficar grande; exportar novo módulo se criado.
+- Criar `tests/integration/ai-text-concurrency.test.ts` e ampliar `tests/integration/ai-text-api.test.ts`.
+
+**Interface produzida:** `confirmProposal(args, proposalId, { expectedVersion, supplierId?, confirmed: true }, key)` bloqueia proposal e usa o mesmo `Tx` para `draftReceipt` + `receiveReceipt` ou `issueStock`, status, uso e auditoria.
+
+**Interfaces consumidas:** `draftReceipt(ctx,input,tx)`, `receiveReceipt(ctx,id,key,tx)`, `issueStock(ctx,input,key,tx)`, entitlement e repo.
+
+- [ ] **Passo 1: escrever testes RED de confirmação.** Compra canônica gera 5 kg × R$38/kg, exige fornecedor/item/local, estoque permanece igual antes da confirmação e muda somente depois da confirmação explícita; baixa exige motivo e preserva bloqueio de saldo negativo.
+- [ ] **Passo 2: escrever testes RED de idempotência/concorrência.** Repetição com mesma chave retorna resultado original; confirmações concorrentes com chaves distintas, versão antiga, status terminal ou tenant cruzado produzem no máximo um movimento.
+- [ ] **Passo 3: escrever teste RED de rollback.** Injetar falha após movimento antes de atualizar proposta/auditoria; confirmar que ledger, saldo, preço, reserva e estado da proposta revertem juntos.
+- [ ] **Passo 4: executar RED focado no DB local.** Rodar `pnpm exec vitest run --config vitest.integration.config.ts tests/integration/ai-text-api.test.ts tests/integration/ai-text-concurrency.test.ts`.
+- [ ] **Passo 5: implementar confirmação atômica.** Reter locks em ordem consistente; validar versão/status/tenant, catálogo atual e entitlement; chamar funções de domínio no mesmo `Tx`; não encadear `InventoryService` com outra transação.
+- [ ] **Passo 6: executar suite focada e T-05/T-20/T-21/T-22.** Esperado: exatamente um movimento, R$38/kg, nenhuma escrita antes da confirmação, isolamento e rollback completo.
+- [ ] **Passo 7: commit.** `feat(ai): confirm text proposals atomically`.
+
+**Checkpoint:** antes de UI, revisão independente de transação, ledger, idempotência e isolamento dos novos comandos.
+
+### Tarefa 4R — Prova transacional em PostgreSQL para liberar o checkpoint
+
+**Estado:** concluída em 2026-10-23. O teste T4R passou 5/5 no C07-DEV autorizado; a revisão independente final foi PASS. Detalhes, resíduos sintéticos permanentes e limites estão em `docs/evidence/ciclo-07a-task-4.md`.
+
+**Arquivos:**
+
+- Criado e executado `tests/integration/ai-text-confirmation-db.test.ts` para a prova runtime delimitada (5/5).
+- Reutilizar `tests/helpers/cycle07-local-db.ts`, `packages/db/src/transaction.ts`, `packages/db/src/ai-proposal-repository.ts`, `packages/db/src/inventory-ledger-repository.ts`, `packages/domain-billing/src/usage.ts`, `packages/domain-purchases/src/receipts.ts` e `packages/domain-inventory/src/issues.ts`; modificar/criar outro helper somente se a revisão aprovar interfaces explícitas e guardas equivalentes.
+- Atualizar `docs/evidence/ciclo-07a-task-4.md`, `docs/PROJECT_STATE.md` e `docs/SPRINT_LOG.md` após executar e revisar os resultados.
+
+**Alvo e preflight fail-closed (sem migration):**
+
+1. Opt-in por `DONOS_C07_APPROVED_PROJECT_REF=kfthwjrvgslnsjigqnyc` e `DONOS_C07_CONFIG_DIR` apontando para config/fixtures/certificado fora do worktree; não imprimir seus conteúdos.
+2. Usar somente `tests/helpers/cycle07-local-db.ts`; validar o opt-in e os realpaths do diretório + `dev.json`/`fixtures.json`/CA antes de ler credenciais. Depois de ler `dev.json`, validar projectRef, URL, hostname/porta/database/usuário do pooler e TLS verificado, sempre antes de abrir pool. Qualquer divergência aborta a execução.
+3. Confirmar por leitura do control plane Supabase, imediatamente antes do teste, que as duas migrations aprovadas da Tarefa 2 estão presentes e são o conjunto completo de migrations Cycle 07; o papel runtime `donos_api` não tem leitura de `supabase_migrations`. O preflight runtime continua em transação `READ ONLY`; não aplicar migrations, resetar ou alterar schema.
+4. Usar somente atores/organizações/unidades sintéticos A/B já previstos em `tests/helpers/fixtures.ts`; não consultar nem modificar dados de cliente. Toda criação de proposta/reserva de teste deve usar chave/run id exclusivo.
+5. Após aprovação T4R, efeitos sintéticos de sucesso são permanentes e aceitos: setup em `core.ingredients`, saldos zero em todos os locais ativos da unidade A, `core.suppliers`, dois `core.request_contexts`, `core.usage_reservations`, oito eventos `core.usage_ledger`, quatro propostas e incremento de quatro unidades em `usage_buckets.settled_units`. Criações de ingredientes/fornecedores e seleção de contextos deixam auditoria; comandos de catálogo e revisões deixam idempotência. O cenário vencedor acrescenta um recibo/itens, movimento, histórico, confirmação idempotente e auditoria. Usar UUID do run no manifesto de chaves, nomes/request IDs, registrar IDs imediatamente após cada commit e verificar o inventário via segunda conexão. Não apagar nem estornar ledger/auditoria/movimentos. Os cenários de baixa bloqueada, rollback e tenant cruzado deixam somente seus setups/reservas/propostas já liquidadas, sem efeitos internos da confirmação. Se o inventário não puder ser delimitado, abortar antes da primeira escrita.
+6. Antes da primeira escrita, iniciar transação `READ ONLY` e verificar `current_database`, `current_user`, papel/alvo DEV e presença exata das duas migrations T2. Abortar em qualquer divergência.
+
+**Interfaces e comportamento a provar:**
+
+- Instanciar o serviço de confirmação com `createDatabase(runtimePool())` e operações reais de compras/estoque/uso. Resolver ator por `login('a')` + `createActorVerifier`; nunca usar token/ator de produção.
+- Para recebimento: criar proposta `ready` sintética e confirmar literalmente; no mesmo `Tx` observar exatamente um recebimento/movimento, quantidade 5 kg, valor R$190, preço histórico R$38/kg, proposta `confirmed`, uso consistente e auditoria. Uma leitura anterior à confirmação deve mostrar zero efeito.
+- Para baixa: exigir motivo; com saldo insuficiente, verificar `INSUFFICIENT_STOCK` e saldo nunca negativo.
+- Para idempotência/concorrência: executar chaves repetidas e distintas em conexões PostgreSQL separadas; provar serialização/lock na linha real, no máximo uma finalização/uma chamada da operação de movimento e resposta conflitante/replay correta. Não substituir o `Tx` real por fila JavaScript.
+- Para rollback: injetar falha depois de executar uma operação de domínio real e antes da terminalização; consultar por segunda conexão e provar rollback de movimento, saldo, histórico de preço, proposta, reserva/uso, idempotência e auditoria.
+- Para tenant: usar ator B e contexto A/B para comprovar que ID forjado não confirma a proposta nem vaza dados, além das checagens da API.
+
+**Passos TDD/verificação:**
+
+- [x] **Passo 1: acrescentar os casos.** Recebimento real, baixa bloqueada, concorrência/idempotência, rollback após operação real e tenant cruzado usam setup sintético com run UUID.
+- [x] **Passo 2: provar a guarda antes de conectar.** Os testes de alvo cobrem divergências e aprovam 7/7; qualquer falha aborta antes do pool.
+- [x] **Passo 3: executar com aprovação T4R.** Preflight `READ ONLY` passou antes de Auth/contexto/setup; a execução final autorizada passou 5/5.
+- [x] **Passo 4: ajustar asserts e inventário.** Comparações de reserva, ledger, cota, auditoria e idempotência foram reforçadas; inventário final foi confirmado por segunda conexão. Resíduos aprovados permanecem no DEV.
+- [x] **Passo 5: rerodar gates.** Arquivo runtime 5/5, focados 17/17, unitários 180/180, typecheck, TSC dos testes e `git diff --check` passaram no Node portátil v24.22.1.
+- [x] **Passo 6: revisão independente read-only.** Resultado final PASS; não executou testes nem acessou o banco.
+- [x] **Passo 7: atualizar evidência e checkpoint.** Evidência, estado e log registram resultado, resíduos e limitações. Tarefa 4/T4R está fechada tecnicamente; o checkpoint humano da Tarefa 5 foi concedido em 2026-10-23 e sua implementação foi concluída em seguida.
+
+**Histórico do preflight:** uma tentativa anterior abortou corretamente porque o tenant sintético A ainda não tinha entitlement ativo `ai_text_whatsapp`. Após autorização explícita do usuário, foram configurados somente os entitlements simulados de A/B e a cota de teste de A no C07-DEV. A execução final posterior passou; a tentativa bloqueada não é o resultado vigente.
+
+**Checkpoint da emenda:** revisão humana e revisão técnica concluídas; T4R ficou restrita ao C07-DEV, sem migrations/reset, com atores sintéticos, target guard e inventário de resíduos. O usuário autorizou a Tarefa 5 em 2026-10-23; a UI foi entregue e revisada conforme as evidências desta seção.
+
+### Tarefa 5 — Interface Apple Design para App 01
+
+**Estado:** concluída em 2026-10-23 após checkpoint humano autorizado pelo usuário, TDD, 8/8 E2Es sintéticos, typecheck e revisão independente PASS. Consulte `docs/evidence/ciclo-07a-task-5.md`.
+
+**Arquivos:**
+
+- Criar `apps/estoque/src/ai/ai-client.ts`, `AiTextWorkspace.tsx`, `AiProposalReview.tsx`, `ai-text.css`.
+- Modificar `apps/estoque/src/inventory/InventoryWorkspace.tsx`, `apps/estoque/src/main.tsx`.
+- Criar `tests/e2e/ai-text-flow.spec.ts`.
+
+**Interface produzida:** `AiTextWorkspace` recebe cliente, lista de insumos/fornecedores ativos e contexto atual; renderiza estados texto, interpretando, revisão e resultado; envia cada mutação com chave idempotente. Mudança de geração do contexto descarta resposta antiga.
+
+**Interfaces consumidas:** contratos aprovados da Tarefa 1, rotas da Tarefa 3 e contexto/geração de `inventory-client.ts`.
+
+- [x] **Passo 1: escrever E2E RED mockado.** Harness sintético completo de Auth/API, sem `owner-fixture.ts` e sem `.local`; cobre proposta canônica, fornecedor ausente, revisão e ausência de confirmação antecipada.
+- [x] **Passo 2: escrever E2E RED de falhas e contexto.** Cobertura de quota/fallback, troca de local, foco/redução de movimento, confirmação incerta e — após revisão independente — resposta perdida no PATCH e IDs de organização/unidade incompatíveis.
+- [x] **Passo 3: executar RED.** RED observado antes da implementação para área ausente; novos REDs observados para PATCH incerto, contexto cruzado e fallback durante confirmação incerta.
+- [x] **Passo 4: implementar componentes e estilos.** Foco visível, alvos confortáveis, tipografia do sistema, `role=status/alert`, `aria-busy`, CSS responsivo e suporte a movimento reduzido; resposta antiga de organização/unidade/local não é aceita.
+- [x] **Passo 5: executar E2E, typecheck e build.** Node v24.22.0: E2E sintético 8/8; `pnpm typecheck`; `pnpm --filter @donos/estoque build`; `git diff --check`.
+- [x] **Passo 6: revisão independente da Tarefa 5.** PASS após correção do caso de PATCH com resposta perdida; sem novos achados.
+- [x] **Passo 7: commit.** Implementação entregue no commit dedicado da Tarefa 5; alterações pré-existentes e misturadas da T4R continuam fora desse commit.
+
+**Checkpoint:** fechado. A UI não interpreta erro de rede/timeout como falha definitiva de movimento; confirmações e revisões incertas exigem GET e replay da mesma chave/payload congelados. Verificação final documentada em `docs/evidence/ciclo-07a-task-5.md`.
+
+### Tarefa 6 — Integração, evidências e revisão independente
+
+**Arquivos:**
+
+- Possível ajuste em `docs/DECISIONS.md`, `docs/PROJECT_STATE.md`, `docs/SPRINT_LOG.md` e criar `docs/evidence/ciclo-07a-task-6.md`.
+- Corrigir somente achados verificados que requeiram mudanças de código e seus testes RED; sem escopo de funcionalidade nova.
+- Nenhum ajuste automático em `docs/05-REGISTRO-DE-DECISOES.md` sem decisão de produto aprovada.
+
+**Alvo de testes e limites da Tarefa 6:**
+
+- Runtime local de verificação: Node portátil v24.22.0; executar `pnpm test:unit`, os dois testes sintéticos `tests/integration/ai-text-api.test.ts` e `tests/integration/ai-text-concurrency.test.ts`, E2E `tests/e2e/ai-text-flow.spec.ts`, `pnpm typecheck`, `pnpm lint`, os três builds diretos dos apps e `git diff --check`.
+- Não executar o conjunto completo `tests/integration/**`: todos os outros testes importam `tests/helpers/local-db.ts` ou `tests/helpers/cycle07-local-db.ts` e abrem banco hospedado/DEV. T4R já está concluída e não deve ser repetida.
+- Não executar todos os E2Es: fora `ai-text-flow.spec.ts`, os specs usam `owner-fixture.ts`, que lê `.local/fixtures.json` e autentica em serviços; esse teste não atende ao limite de não acessar credenciais/serviços no T6.
+- Não executar `pnpm build` na raiz: `scripts/build.mjs` lê `.local/dev.json` quando presente. Em vez disso, executar `pnpm --filter @donos/portal build`, `pnpm --filter @donos/estoque build` e `pnpm --filter @donos/precificacao build`, que chamam Vite diretamente sem configuração ou acesso a serviços.
+- Testes de banco que requeiram instância mutável permanecem fora do T6; executar apenas integrações com dependências em memória.
+
+- [x] **Passo 1: execução integrada local.** Node v24.22.0: unitários 184/184; integrações sintéticas 17/17; E2E mockado 8/8; typecheck, lint, três builds diretos dos apps e `git diff --check` passaram. A primeira inicialização E2E sem configuração sintética falhou antes de autenticar; a execução válida foi repetida com URL/chave fictícias. Detalhes em `docs/evidence/ciclo-07a-task-6.md`.
+- [x] **Passo 2: auditoria independente read-only.** Revisão estática independente encontrou e verificou correções para fornecedor, preço zero, arredondamento do total e underflow; sem acesso a banco mutável. Limites de runtime/RLS estão na evidência.
+- [x] **Passo 3: corrigir achados com teste RED antes do fix.** Foram reproduzidos REDs para preço zero pronto e fornecedor alterável na confirmação; após correção, unitários, integrações e E2E relacionados passaram. O total editado agora é derivado com `BigInt`/strings decimais e exibido separadamente do total original do texto.
+- [x] **Passo 4: registrar evidência e limites.** Evidência diferencia gates unitários, integração em memória, E2E mockado e T4R PostgreSQL anterior. Nenhum provedor real/WhatsApp foi validado; crash abrupto no intervalo pós-dispatch segue risco operacional que demanda recuperação persistente fora deste escopo.
+- [x] **Passo 5: preparar commits/PR do ciclo.** T4R está em commit próprio `16ea596`; integração/correções T6 em `b1c145d`. PR draft #7 aberto contra `codex/ciclo-04-stock-locations-audit` e atualizado no estado/log. Não houve merge/deploy nem início de Foto/Voz/WhatsApp.
+
+**Checkpoint final:** evidência, gates locais, revisão independente e PR draft concluídos. A aprovação humana e o merge permanecem fora deste checkpoint; nenhum deploy ou próxima modalidade foi iniciada.
+
+## Estratégia de agentes e execução
+
+- O coordenador mantém contratos, migração, repositório, uso/serviço API, confirmação transacional, testes de integração e integração final.
+- Após congelar Task 1 interfaces, subagente pode implementar somente `packages/domain-ai/src/**` e testes unitários desse domínio; outro pode implementar somente `apps/estoque/src/ai/**` e E2E mockado depois de receber os DTOs finais.
+- `InventoryWorkspace.tsx`, `app.ts`, migration, DB e transações não são compartilhados entre escritores; integração fica com o coordenador. Não paralelizar tasks que dependam do DB mutável.
+- Método recomendado: subagent-driven com checkpoints após cada tarefa. O erro em confirmação pode criar movimento ou duplicar custo; contratos e transação centralizados justificam a revisão frequente.
+- Gate humano satisfeito: plano e retenção aprovados em 2026-10-16; implementação de Tarefa 1 iniciada após aprovação. C07-DEV autoriza somente a Tarefa 2 no projeto DEV indicado, com migration aditiva e dados sintéticos; confirmar guard do alvo antes de cada conexão. Apple Design foi aplicado na Tarefa 5 concluída.

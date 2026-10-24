@@ -1,20 +1,36 @@
 # Estado do projeto DONOS Next
 
-Atualizado em 2026-10-16.
+Atualizado em 2026-10-23.
 
 ## Ciclo atual
 
-- **Ciclo 06 — listas de compras Premium do App 01:** implementação e releitura independente concluídas; [PR #6](https://github.com/makollykalk/Donos_next/pull/6) aberto para revisão humana, sem merge.
+- **Ciclo 06 — listas de compras Premium do App 01:** implementação, gates e revisão humana concluídos; [PR #6](https://github.com/makollykalk/Donos_next/pull/6) merged em 2026-10-16 no commit `d8a9f51`.
 - Escopo: alertas e limites Base, listas Premium, sugestões, confirmação explícita de compra, compromissos, recebimento parcial associado, histórico, CSV/impressão e interface do App 01.
 - Decisão aprovada: somente compras explicitamente confirmadas pelo dono contam como compromisso; rascunhos e recebimentos ficam fora. Ver [DECISIONS](DECISIONS.md), [ADR-0005](adr/0005-shopping-commitments.md), [spec](superpowers/specs/2026-10-16-shopping-design.md) e [plano TDD](superpowers/plans/2026-10-16-shopping.md).
 - Migrations `20261016162828`, `20261016164932` e `20261016165528` aplicadas somente no Supabase DONOS Next DEV `kfthwjrvgslnsjigqnyc`. Nenhuma alteração em produção, legado, deploy ou cobrança.
-- Evidências e limitações: [Ciclo 06](evidence/ciclo-06-shopping.md). Sem merge.
+- Evidências e limitações: [Ciclo 06](evidence/ciclo-06-shopping.md). Sem deploy.
 
-## Estado Git e próximo passo
+## Próximo subciclo
 
-- Branch: `codex/ciclo-06-shopping`, baseada no histórico local do Ciclo 04. Checkout principal permanece separado; implementação ocorre no worktree listado acima.
+- **Ciclo 07A — proposta de estoque por texto no App 01:** spec, plano TDD e política de retenção aprovados pelo usuário. Tarefas 1–3 concluídas e revisadas; T4R passou 5/5 em PostgreSQL C07-DEV como `donos_api` e teve revisão independente PASS; T5 foi entregue em `bf1e69d` e teve revisão independente PASS. T6 passou gates locais (unitários 184/184, integração sintética 17/17, E2E mockado 8/8, typecheck, lint e três builds diretos) e revisão independente estática. Commits T4R `16ea596` e T6 `b1c145d`; [PR draft #7](https://github.com/makollykalk/Donos_next/pull/7) aberto contra a base do Ciclo 06. Evidências: [T5](evidence/ciclo-07a-task-5.md), [T6](evidence/ciclo-07a-task-6.md).
+- Escopo da spec: uma ação/um insumo por proposta, mock determinístico apenas em desenvolvimento/testes, confirmação explícita e medidor existente `ai_text_whatsapp`; não autoriza integração real, WhatsApp ou uso remoto.
+- A spec está em [2026-10-16-ai-text-in-app-design.md](superpowers/specs/2026-10-16-ai-text-in-app-design.md), o plano em [2026-10-16-ai-text-in-app.md](superpowers/plans/2026-10-16-ai-text-in-app.md) e ADR [0006](adr/0006-ai-text-in-app.md). Tarefa 1: commits `72625a6` a `9dc0f20`, review round 2 limpo. Tarefa 2: migrations aditivas autorizadas em C07-DEV, revisão limpa. Tarefa 3: commit `42e6e58`, revisão limpa após duas rodadas de correções. Tarefa 4: commit `e20b634` mais prova T4R runtime 5/5 e revisão independente final PASS, documentadas em [evidência](evidence/ciclo-07a-task-4.md). Tarefa 5: commit `bf1e69d`, E2E sintético 8/8, typecheck, build App 01 e revisão independente PASS, em [evidência](evidence/ciclo-07a-task-5.md).
+- Política aprovada: dados estruturados de proposta removidos 30 dias após estado terminal; propostas abertas expiram em 30 dias da criação. A Apple Design skill foi aplicada na Tarefa 5.
+- Tarefa 2 aplicada somente no Supabase DONOS Next DEV `kfthwjrvgslnsjigqnyc`: migrations `20261016190345_cycle07_ai_text_proposals` e `20261016190427_cycle07_ai_proposal_reservation_fk_index`; sem reset, produção, legado, deploy ou integração paga. Replay desde DB local vazio segue pendente.
+
+## Resultado da Tarefa 4/T4R e checkpoint atual
+
+- Branch ativa: `codex/ciclo-07-ai-text`, commit atual de UI `bf1e69d`; implementação inicial da Tarefa 4 em `e20b634`. A prova T4R e os ajustes associados de teste/documentação permanecem sem commit e foram preservados fora do commit de UI.
+- Execução final T4R: Node portátil v24.22.1, DEV autorizado `kfthwjrvgslnsjigqnyc`, usuário runtime `donos_api`, preflight `READ ONLY`, cinco cenários aprovados (5/5). Gates locais: foco 17/17, unitários 180/180, `pnpm typecheck`, TSC dos testes e `git diff --check` passaram.
+- Revisão independente final: PASS. Cobriu concorrência, idempotência, erro por saldo, rollback após operação real, isolamento entre tenants e coerência da evidência. Ver [evidência da Tarefa 4](evidence/ciclo-07a-task-4.md).
+- Para satisfazer os pré-requisitos dos atores sintéticos, foram autorizados e criados no DEV apenas entitlement/cota simulados para A e assinatura/entitlements simulados para B; B não recebeu cota. O bucket de teste A foi ajustado dentro da autorização. Nenhuma migration, reset, produção, deploy ou cobrança foi executada. Registros sintéticos são permanentes e estão inventariados na evidência.
+- Tarefa 4/T4R e Tarefa 5 estão concluídas nos respectivos gates. A Tarefa 6 não acessou banco, Auth, `.local` ou provedores reais; corrigiu fornecedor mutável após revisão, preço zero pronto e total desatualizado na UI. O risco de crash abrupto pós-dispatch segue aberto para recuperação operacional. Não houve deploy ou alteração no legado/produção. Revisão final e commits/PR T6 pendentes.
+
+## Base do ciclo e estado geral
+
+- Branch de base: `codex/ciclo-04-stock-locations-audit` no merge do PR #6. O Ciclo 07A está isolado no worktree `ciclo-07-ai-text`.
 - Passaram 150 testes unitários, 6 testes de integração selecionados, E2E mockado 1/1, typecheck, lint, build e diff check. Revisão independente não encontrou bloqueadores; lacuna remanescente de cobertura RLS está descrita na evidência.
-- PR #6 compara `codex/ciclo-06-shopping` com `codex/ciclo-04-stock-locations-audit`; estado aberto e mergeable na última consulta. Não fazer merge nem deploy automaticamente.
+- PR #6 foi merged para `codex/ciclo-04-stock-locations-audit`; não houve deploy.
 
 ## Ambiente e ressalvas
 
